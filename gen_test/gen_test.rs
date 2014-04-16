@@ -262,6 +262,8 @@ pub fn generate_default() -> Dungeon {
 	generate(&DungeonParams::default())
 }
 
+// TODO monsters and treasure
+// TODO stair key in second-furthest room (not adjacent to exit)
 pub fn generate(params: &DungeonParams) -> Dungeon {
 
 	let mut rng = task_rng();
