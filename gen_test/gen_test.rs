@@ -16,6 +16,8 @@ enum TileType {
 	Wall,
 	Door,
 	Corridor,
+	StairsUp,
+	StairsDown,
 	Unknown
 }
 
@@ -201,18 +203,6 @@ fn print_dungeon(dungeon: &Dungeon) {
 	println!("Size: {}x{}",dungeon.width,dungeon.height);
 }
 
-static ROOM_COUNT: int = 100;
-static ROOM_S_MIN: int = 3;
-static ROOM_S_MAX: int = 10;
-static HALL_W_MIN: int = 1;
-static HALL_W_MAX: int = 2;
-static HALL_L_MIN: int = 2;
-static HALL_L_MAX: int = 10;
-static HALL_CHANCE: f32 = 0.5;
-
-static MAP_W: int = 150;
-static MAP_H: int = 150;
-
 fn random_range(task: &mut TaskRng, lo: int, hi: int) -> int {
 	if lo == hi {
 		fail!("FFFF");
@@ -221,21 +211,58 @@ fn random_range(task: &mut TaskRng, lo: int, hi: int) -> int {
 	}
 }
 
-fn generate() -> Dungeon {
+struct DungeonParams {
+	room_count: int,
+	room_size_min: int,
+	room_size_max: int,
+	hall_width_min: int,
+	hall_width_max: int,
+	hall_length_min: int,
+	hall_length_max: int,
+	hall_chance: f32,
+	map_width: int,
+	map_height: int
+}
+
+impl DungeonParams {
+	pub fn default() -> DungeonParams {
+		DungeonParams {
+			room_count: 20,
+			room_size_min: 3,
+			room_size_max: 10,
+			hall_width_min: 1,
+			hall_width_max: 1,
+			hall_length_min: 2,
+			hall_length_max: 10,
+			hall_chance: 0.25,
+			map_width: 100,
+			map_height: 100
+		}
+	}
+}
+
+pub fn generate_default() -> Dungeon {
+	generate(&DungeonParams::default())
+}
+
+pub fn generate(params: &DungeonParams) -> Dungeon {
 
 	let mut rng = task_rng();
-	let mut d = Dungeon::empty(MAP_W,MAP_H);
+	let mut d = Dungeon::empty(params.map_width,params.map_height);
 
 	let mut rooms: Vec<Room> = Vec::new();
+	let mut actual_rooms: uint = 0;
+
+	let mut neighbors: Vec<Vec<int>> = Vec::new();
 
 	let mut start: Option<Room> = None;
 	let mut end: Option<Room> = None;
 
-	while rooms.len() < ROOM_COUNT as uint {
+	while actual_rooms < params.room_count as uint {
 
 		// don't start with a hall
 		let is_first = rooms.len() == 0;
-		let is_hall = !is_first && random::<f32>() < HALL_CHANCE;
+		let is_hall = !is_first && random::<f32>() < params.hall_chance;
 
 		// declare room fields
 		let mut x;
@@ -246,9 +273,12 @@ fn generate() -> Dungeon {
 		let mut c_y: Option<int> = None;
 		let mut add_door = true;
 
+		// are we adding
+		let mut exist_idx = -1;
+
 		if is_hall {
-			let len = random_range(&mut rng, HALL_L_MIN,HALL_L_MAX+1);
-			let wid = random_range(&mut rng, HALL_W_MIN,HALL_W_MAX+1);
+			let len = random_range(&mut rng, params.hall_length_min,params.hall_length_max+1);
+			let wid = random_range(&mut rng, params.hall_width_min,params.hall_width_max+1);
 			if random::<f32>() < 0.5 {
 				// east-west hall
 				w = len;
@@ -261,8 +291,8 @@ fn generate() -> Dungeon {
 
 		} else {
 
-			w = random_range(&mut rng, ROOM_S_MIN,ROOM_S_MAX+1);
-			h = random_range(&mut rng, ROOM_S_MIN,ROOM_S_MAX+1);
+			w = random_range(&mut rng, params.room_size_min,params.room_size_max+1);
+			h = random_range(&mut rng, params.room_size_min,params.room_size_max+1);
 
 		}
 
@@ -270,7 +300,7 @@ fn generate() -> Dungeon {
 			x = random_range(&mut rng, 1, d.width - 1 - w);
 			y = random_range(&mut rng, 1, d.height - 1 - h);
 		} else {
-			let exist_idx = random_range(&mut rng, 0,rooms.len() as int);
+			exist_idx = random_range(&mut rng, 0,rooms.len() as int);
 			let existing = rooms.get(exist_idx as uint);
 
 			// TODO is this necessary?
@@ -341,9 +371,105 @@ fn generate() -> Dungeon {
 				(Some(x),Some(y)) => { d.set_tile(x,y,door_tile); }
 				_ => {}
 			}
+
+			// update room count if not hall
+			if !room.hall {
+				actual_rooms += 1;
+			}
+
+			// update adjacency list
+			neighbors.push(Vec::new());
+			if exist_idx != -1 {
+				let new_idx = rooms.len()-1;
+				neighbors.get_mut(exist_idx as uint).push(new_idx as int);
+				neighbors.get_mut(new_idx).push(exist_idx as int);
+			}
 		}
 	}
 	d.shrink();
+
+
+	// time for some pathfinding
+	// yay dijkstra
+
+	let mut unvisited: Vec<uint> = Vec::new();
+	let mut visited: Vec<uint> = Vec::new();
+	let mut distances: Vec<Option<int>> = Vec::new();
+
+	// initialize lists
+	for i in range(0,rooms.len()) {
+		unvisited.push(i);
+		distances.push(None);
+	}
+	// starting room is always first in list
+	*distances.get_mut(0) = Some(0);
+	let mut cur = 0;
+
+	while unvisited.len() > 0 {
+		println!("{} to go", unvisited.len());
+		unvisited.remove(cur);
+		visited.push(cur);
+		let current_neighbors = neighbors.get(cur);
+		let mut unvisited_neighbors = 0;
+		for neighbor in current_neighbors.iter() {
+			// if neighbor is visited, skip it
+			let neighbor = neighbor.clone() as uint;
+			if visited.contains( &neighbor ) { continue; }
+			unvisited_neighbors += 1;
+			// calc tentative distance
+			let tentative_distance = distances.get(cur).clone().expect("Distance not in set") + 1;
+			let prev_dist_opt = distances.get(neighbor).clone();
+			// if old dist is infinity or new distance is better,
+			// then update the distances
+			if prev_dist_opt.is_none() || tentative_distance > prev_dist_opt.unwrap() {
+				*distances.get_mut(neighbor) = Some(tentative_distance);
+			}
+		}
+		if unvisited_neighbors > 0 {
+			println!("Cur: {}",cur);
+			// find closest unvisited neighbor
+			let mut closest_idx: Option<uint> = None;
+			let mut closest_dist: Option<int> = None;
+			for neighbor in current_neighbors.iter() {
+				let neighbor = neighbor.clone() as uint;
+
+				if visited.contains( &neighbor ) { continue; }
+
+				println!("Got a neighbor");
+
+				let dist = distances.get(neighbor).clone();
+
+				let closer = closest_dist.is_none() ||
+					(dist.is_some() && dist.unwrap() < closest_dist.unwrap());
+
+				if closer {
+					closest_idx = Some(neighbor);
+					closest_dist = distances.get(neighbor).clone();
+				}
+			}
+			// set cur equal to closest univisted neighbor
+			cur = closest_idx.expect("lol wut");
+			println!("Set cur to {}",cur);
+		} else {
+			unvisited.pop();
+		}
+	}
+
+	// filter out halls
+	let mut room_idx_list = Vec::new();
+
+	for i in range(0,rooms.len()) {
+		let room = rooms.get(i);
+		if !room.hall {
+			room_idx_list.push(i);
+		}
+	}
+
+	for room in room_idx_list.iter() {
+		println!("{}->{}",room,distances.get(room.clone()));
+	}
+
+
 	d
 }
 
@@ -366,7 +492,7 @@ fn main() {
 	let mut total: f32 = 0.;
 	for i in range(0,count) {
 		println!("Generating dungeon {}...",i);
-		let d = generate();
+		let d = generate_default();
 		total_w += d.width as f32;
 		total_h += d.height as f32;
 		total += 1.0;
