@@ -2,7 +2,6 @@ extern crate rand;
 
 use std::vec::Vec;
 use std::io::{stdin,BufferedReader};
-use std::from_str;
 use rand::{task_rng,Rng,TaskRng,random};
 
 struct Tile {
@@ -21,6 +20,7 @@ enum TileType {
 	Unknown
 }
 
+#[deriving(Clone)]
 struct Room {
 	x: int,
 	y: int,
@@ -29,10 +29,11 @@ struct Room {
 	hall: bool
 }
 
-struct Dungeon {
+pub struct Dungeon {
 	width: int,
 	height: int,
-	tiles: Vec<Tile>
+	tiles: Vec<Tile>,
+	path_length: int
 }
 
 impl Dungeon {
@@ -45,12 +46,24 @@ impl Dungeon {
 				let x: int = i % w;
 				let y: int = i / w;
 				Tile { x: x, y: y, t: Wall }
-			})
+			}),
+			path_length: 0
+		}
+	}
+
+	fn fix_coords(&mut self) {
+		for y in range(0,self.height) {
+			for x in range(0,self.width) {
+				let idx = x + y*self.width;
+				let tile = self.tiles.get_mut(idx as uint);
+				tile.x = x;
+				tile.y = y;
+			}
 		}
 	}
 
 	fn shrink(&mut self) {
-		let mut d = self;
+		let d = self;
 		while d.shrink_h(1,0) {
 			// println!("Removed a left column");
 		}
@@ -63,6 +76,7 @@ impl Dungeon {
 		while d.shrink_v(d.height-2,d.height-1) {
 			// println!("Removed a bottom row");
 		}
+		d.fix_coords();
 	}
 
 	fn shrink_h(&mut self, x_check: int, x_remove: int) -> bool {
@@ -193,6 +207,8 @@ fn print_dungeon(dungeon: &Dungeon) {
 					Wall => '#',
 					Corridor => '.',
 					Door => 'X',
+					StairsUp => '^',
+					StairsDown => 'V',
 					_ => '?'
 				}
 			};
@@ -201,6 +217,7 @@ fn print_dungeon(dungeon: &Dungeon) {
 		print!("\n");
 	}
 	println!("Size: {}x{}",dungeon.width,dungeon.height);
+	println!("Path length: {}",dungeon.path_length);
 }
 
 fn random_range(task: &mut TaskRng, lo: int, hi: int) -> int {
@@ -211,7 +228,7 @@ fn random_range(task: &mut TaskRng, lo: int, hi: int) -> int {
 	}
 }
 
-struct DungeonParams {
+pub struct DungeonParams {
 	room_count: int,
 	room_size_min: int,
 	room_size_max: int,
@@ -227,7 +244,7 @@ struct DungeonParams {
 impl DungeonParams {
 	pub fn default() -> DungeonParams {
 		DungeonParams {
-			room_count: 20,
+			room_count: 50,
 			room_size_min: 3,
 			room_size_max: 10,
 			hall_width_min: 1,
@@ -235,8 +252,8 @@ impl DungeonParams {
 			hall_length_min: 2,
 			hall_length_max: 10,
 			hall_chance: 0.25,
-			map_width: 100,
-			map_height: 100
+			map_width: 200,
+			map_height: 200
 		}
 	}
 }
@@ -256,7 +273,6 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 	let mut neighbors: Vec<Vec<int>> = Vec::new();
 
 	let mut start: Option<Room> = None;
-	let mut end: Option<Room> = None;
 
 	while actual_rooms < params.room_count as uint {
 
@@ -386,90 +402,85 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 			}
 		}
 	}
-	d.shrink();
 
 
-	// time for some pathfinding
-	// yay dijkstra
-
-	let mut unvisited: Vec<uint> = Vec::new();
-	let mut visited: Vec<uint> = Vec::new();
+	// let's do this differently
 	let mut distances: Vec<Option<int>> = Vec::new();
-
-	// initialize lists
-	for i in range(0,rooms.len()) {
-		unvisited.push(i);
-		distances.push(None);
-	}
-	// starting room is always first in list
+	for _ in range(0,rooms.len()) { distances.push(None) }
+	let mut queue: Vec<uint> = Vec::new();
 	*distances.get_mut(0) = Some(0);
-	let mut cur = 0;
+	queue.push(0);
 
-	while unvisited.len() > 0 {
-		println!("{} to go", unvisited.len());
-		unvisited.remove(cur);
-		visited.push(cur);
-		let current_neighbors = neighbors.get(cur);
-		let mut unvisited_neighbors = 0;
-		for neighbor in current_neighbors.iter() {
-			// if neighbor is visited, skip it
-			let neighbor = neighbor.clone() as uint;
-			if visited.contains( &neighbor ) { continue; }
-			unvisited_neighbors += 1;
-			// calc tentative distance
-			let tentative_distance = distances.get(cur).clone().expect("Distance not in set") + 1;
-			let prev_dist_opt = distances.get(neighbor).clone();
-			// if old dist is infinity or new distance is better,
-			// then update the distances
-			if prev_dist_opt.is_none() || tentative_distance > prev_dist_opt.unwrap() {
-				*distances.get_mut(neighbor) = Some(tentative_distance);
+	let mut visited_idx: Vec<int> = Vec::new();
+
+	while queue.len() > 0 {
+		let current_idx = queue.remove(0).expect("Queue shouldn't be empty");
+		let current_dist = distances.get(current_idx).expect("Distance should be set");
+		let adjacent = neighbors.get(current_idx);
+		for neighbor in adjacent.iter() {
+
+			if visited_idx.contains( neighbor ) { continue; }
+
+			let old_dist = distances.get(neighbor.clone() as uint).clone();
+			let new_dist = current_dist + 1;
+			if old_dist.is_none() || old_dist.expect("wat") > new_dist {
+				*distances.get_mut(neighbor.clone() as uint) = Some(new_dist);
 			}
+			queue.push(neighbor.clone() as uint);
 		}
-		if unvisited_neighbors > 0 {
-			println!("Cur: {}",cur);
-			// find closest unvisited neighbor
-			let mut closest_idx: Option<uint> = None;
-			let mut closest_dist: Option<int> = None;
-			for neighbor in current_neighbors.iter() {
-				let neighbor = neighbor.clone() as uint;
 
-				if visited.contains( &neighbor ) { continue; }
-
-				println!("Got a neighbor");
-
-				let dist = distances.get(neighbor).clone();
-
-				let closer = closest_dist.is_none() ||
-					(dist.is_some() && dist.unwrap() < closest_dist.unwrap());
-
-				if closer {
-					closest_idx = Some(neighbor);
-					closest_dist = distances.get(neighbor).clone();
-				}
-			}
-			// set cur equal to closest univisted neighbor
-			cur = closest_idx.expect("lol wut");
-			println!("Set cur to {}",cur);
-		} else {
-			unvisited.pop();
-		}
+		visited_idx.push(current_idx as int);
 	}
 
-	// filter out halls
-	let mut room_idx_list = Vec::new();
+	// for i in range(0,distances.len()) {
+	// 	println!("{}->{}",i,distances.get(i).expect("Distance not set?!"));
+	// }
 
+	// find room with furthest distance
+	let mut furthest_idx: Option<uint> = None;
+	let mut furthest_dist: Option<int> = None;
 	for i in range(0,rooms.len()) {
 		let room = rooms.get(i);
-		if !room.hall {
-			room_idx_list.push(i);
+		if room.hall { continue; }
+		let dist = distances.get(i).clone().expect("Distance somehow isn't set");
+		if furthest_dist.is_none() || furthest_dist.expect("O_o") < dist {
+			furthest_dist = Some(dist);
+			furthest_idx = Some(i);
 		}
 	}
 
-	for room in room_idx_list.iter() {
-		println!("{}->{}",room,distances.get(room.clone()));
+	// println!("Furthest room is room {} with distance {}",furthest_idx.unwrap(),furthest_dist.unwrap());
+
+	let end = rooms.get_mut(furthest_idx.expect("Furthest index not set")).clone();
+	d.path_length = furthest_dist.expect("Srsly wat");
+
+	// put up stairs in start
+	let start_room: &Room = &start.expect("Start is broken");
+	let end_room: &Room = &end;
+
+	//println!("Start room: {},{}",start_room.x,start_room.y);
+	//println!("End room: {},{}",end_room.x,end_room.y);
+
+	let set_start = d.set_tile(
+		start_room.x + start_room.w / 2,
+		start_room.y + start_room.h / 2,
+		StairsUp
+	);
+
+	let set_end = d.set_tile(
+		end_room.x + end_room.w / 2,
+		end_room.y + end_room.h / 2,
+		StairsDown
+	);
+
+	if !set_start || !set_end {
+		fail!("Failed to set start/end ({}/{})",set_start,set_end);
 	}
 
-
+	// ROOM POSITIONS ARE INVALID
+	// AFTER SHRINKING!!!
+	// heeerrrppp dddeeerrrpppp
+	d.shrink();
 	d
 }
 
