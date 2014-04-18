@@ -1,7 +1,6 @@
 use std::num::pow;
 use std::vec::Vec;
-use rand::{task_rng,Rng,TaskRng,random};
-use util::random_range;
+use rand::{Rng};
 use util::map_range;
 
 pub struct Tile {
@@ -96,10 +95,10 @@ impl Dungeon {
 							_ => '?'
 						},
 						None => match tile.t {
-							Floor => '#',
-							Wall => ' ',
-							Corridor => '.',
-							Door => 'X',
+							Floor => ' ',
+							Wall => '#',
+							Corridor => ' ',
+							Door => '|',
 							StairsUp => '^',
 							StairsDown => 'V',
 							_ => '?'
@@ -176,15 +175,15 @@ impl DungeonParams {
 }
 
 
-pub fn generate_default() -> Dungeon {
-	generate(&DungeonParams::small())
+pub fn generate_default<T:Rng>(rng: &mut T) -> Dungeon {
+	generate(rng,&DungeonParams::default())
 }
 
 // TODO monsters and treasure
 // TODO stair key in second-furthest room (not adjacent to exit)
-pub fn generate(params: &DungeonParams) -> Dungeon {
+pub fn generate<T:Rng>(rng: &mut T, params: &DungeonParams) -> Dungeon {
 
-	let mut rng = task_rng();
+	// let mut rng = task_rng();
 	let mut d = Dungeon::empty(params.map_width,params.map_height);
 
 	let mut rooms: Vec<Room> = Vec::new();
@@ -196,7 +195,7 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 
 		// don't start with a hall
 		let is_first = rooms.len() == 0;
-		let is_hall = !is_first && random::<f32>() < params.hall_chance;
+		let is_hall = !is_first && rng.gen_range(0f32,1f32) < params.hall_chance;
 
 		// declare room fields
 		let mut x;
@@ -211,9 +210,9 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 		let mut exist_idx = -1;
 
 		if is_hall {
-			let len = random_range(&mut rng, params.hall_length_min,params.hall_length_max+1);
-			let wid = random_range(&mut rng, params.hall_width_min,params.hall_width_max+1);
-			if random::<f32>() < 0.5 { // east-west hall
+			let len = rng.gen_range(params.hall_length_min,params.hall_length_max+1);
+			let wid = rng.gen_range(params.hall_width_min,params.hall_width_max+1);
+			if rng.gen_range(0.0f32,1.0f32) < 0.5f32 { // east-west hall
 				w = len;
 				h = wid;
 			} else { // north-south hall
@@ -221,15 +220,15 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 				h = len;
 			}
 		} else {
-			w = random_range(&mut rng, params.room_size_min,params.room_size_max+1);
-			h = random_range(&mut rng, params.room_size_min,params.room_size_max+1);
+			w = rng.gen_range(params.room_size_min,params.room_size_max+1);
+			h = rng.gen_range(params.room_size_min,params.room_size_max+1);
 		}
 
 		if is_first {
-			x = random_range(&mut rng, 1, d.width - 1 - w);
-			y = random_range(&mut rng, 1, d.height - 1 - h);
+			x = rng.gen_range(1, d.width - 1 - w);
+			y = rng.gen_range(1, d.height - 1 - h);
 		} else {
-			exist_idx = random_range(&mut rng, 0,rooms.len() as int);
+			exist_idx = rng.gen_range(0,rooms.len() as int);
 			let existing = rooms.get(exist_idx as uint);
 
 			// TODO is this necessary?
@@ -244,11 +243,11 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 			}
 
 			// pick cardinal direction to attch room
-			let direction = random_range(&mut rng, 0,4);
+			let direction = rng.gen_range(0,4);
 			// pick x point
 			let connect_x = match direction {
-				0|2 => random_range(&mut rng, existing.x,existing.x+existing.w),
-				1|3 => match random_range(&mut rng, 0,2) {
+				0|2 => rng.gen_range(existing.x,existing.x+existing.w),
+				1|3 => match rng.gen_range(0,2) {
 					0 => existing.x-1,
 					1 => existing.x + existing.w,
 					_ => fail!("A")
@@ -257,8 +256,8 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 			};
 			// pick y point
 			let connect_y = match direction {
-				1|3 => random_range(&mut rng, existing.y,existing.y+existing.h),
-				0|2 => match random_range(&mut rng, 0,2) {
+				1|3 => rng.gen_range(existing.y,existing.y+existing.h),
+				0|2 => match rng.gen_range(0,2) {
 					0 => existing.y-1,
 					1 => existing.y + existing.h,
 					_ => fail!("C")
@@ -271,14 +270,14 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 				// we must ADD ONE in this range because
 				// the rng is exclusive on the high end!!!
 				// what a bug...
-				0|2 => random_range(&mut rng, connect_x-(w-1),connect_x+1),
+				0|2 => rng.gen_range(connect_x-(w-1),connect_x+1),
 				1 => connect_x+1,
 				3 => connect_x-w,
 				_ => fail!("E")
 			};
 			y = match direction {
 				// same as above
-				1|3 => random_range(&mut rng, connect_y-(h-1),connect_y+1),
+				1|3 => rng.gen_range(connect_y-(h-1),connect_y+1),
 				2 => connect_y+1,
 				0 => connect_y-h,
 				_ => fail!("F")
@@ -312,7 +311,7 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 				neighbors.get_mut(exist_idx as uint).push(new_idx as int);
 				neighbors.get_mut(new_idx).push(exist_idx as int);
 			}
-		}
+		} // else try again :-(
 	}
 
 
@@ -320,7 +319,7 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 	let mut start_idx_opt = None;
 
 	while start_idx_opt.is_none() || rooms.get(start_idx_opt.expect("Shouldn't be here lawl")).hall {
-		start_idx_opt = Some( random_range(&mut rng, 0, rooms.len() as int) as uint );
+		start_idx_opt = Some( rng.gen_range(0, rooms.len() as int) as uint );
 	}
 
 	let start_idx = start_idx_opt.expect("Okay cool good wut");
@@ -414,13 +413,13 @@ pub fn generate(params: &DungeonParams) -> Dungeon {
 
 		let max_possible = if room.hall { params.hall_monsters_max } else { params.room_monsters_max } as f32;
 		let max_monsters = map_range( area, min_area, max_area, 0.0, max_possible, true ).round() as int;
-		let monster_count = random_range(&mut rng, 0, max_monsters + 1);
+		let monster_count = rng.gen_range(0, max_monsters + 1);
 		total_monsters += monster_count;
 
 		let mut placed_monsters = 0;
 		while placed_monsters < monster_count {
-			let x = random_range(&mut rng, room.x, room.x+room.w);
-			let y = random_range(&mut rng, room.y, room.y+room.h);
+			let x = rng.gen_range(room.x, room.x+room.w);
+			let y = rng.gen_range(room.y, room.y+room.h);
 			let tile = d.get_tile_mut(x,y).expect("This should NOT be out of range");
 			match tile.e {
 				Some(_) => continue,
