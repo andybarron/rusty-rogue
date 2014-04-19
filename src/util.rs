@@ -20,6 +20,11 @@ pub fn get_rc_resource<T>(resource : T) -> Rc<RefCell<T>> {
 	Rc::new(RefCell::new(resource))
 }
 
+// TODO add gutter/separation option
+pub fn get_sprite_coords(x: uint, y: uint, tile_w: uint, tile_h: uint) -> (uint,uint) {
+	( x*tile_w, y*tile_h )
+}
+
 /* Random stuff */
 
 pub fn map_range_f32(n: f32, min1: f32, max1: f32, min2: f32, max2: f32, clamp_val: bool) -> f32 {

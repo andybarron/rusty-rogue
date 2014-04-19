@@ -1,13 +1,14 @@
 use std::num::pow;
 use std::vec::Vec;
+use std::slice::Items;
 use rand::{Rng};
-use util::map_range;
+use util::map_range_f32;
 
 pub struct Tile {
-	x: int,
-	y: int,
-	t: TileType,
-	e: Option<Entity>
+	pub x: int,
+	pub y: int,
+	pub t: TileType,
+	pub e: Option<Entity>
 }
 
 pub enum Entity {
@@ -79,6 +80,10 @@ impl Dungeon {
 			Some(self.tiles.get(idx as uint))
 		}
 
+	}
+
+	pub fn get_tile_vector<'a>(&'a self) -> &'a Vec<Tile> {
+		&self.tiles
 	}
 
 	pub fn print(&self) {
@@ -412,7 +417,7 @@ pub fn generate<T:Rng>(rng: &mut T, params: &DungeonParams) -> Dungeon {
 		};
 
 		let max_possible = if room.hall { params.hall_monsters_max } else { params.room_monsters_max } as f32;
-		let max_monsters = map_range( area, min_area, max_area, 0.0, max_possible, true ).round() as int;
+		let max_monsters = map_range_f32( area, min_area, max_area, 0.0, max_possible, true ).round() as int;
 		let monster_count = rng.gen_range(0, max_monsters + 1);
 		total_monsters += monster_count;
 
@@ -431,7 +436,7 @@ pub fn generate<T:Rng>(rng: &mut T, params: &DungeonParams) -> Dungeon {
 		}
 	}
 
-	println!("{} total monsters", total_monsters);
+	// println!("{} total monsters", total_monsters);
 
 	// ROOM POSITIONS ARE INVALID
 	// AFTER SHRINKING!!!

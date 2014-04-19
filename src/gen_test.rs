@@ -1,7 +1,6 @@
 extern crate rand;
 
 use std::io::{stdin,BufferedReader};
-use util::int_from_reader;
 use generator::generate_default;
 use rand::{XorShiftRng,SeedableRng,TaskRng,Rng,task_rng};
 

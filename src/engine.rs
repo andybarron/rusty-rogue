@@ -26,6 +26,7 @@ pub fn start(screen : ~Screen, title : &str, w : uint, h : uint) {
 
 	// grab screen
 	let mut s = screen;
+	s.init(&mut game, &mut window);
 
 	// init timer
 	let mut t = Timer::new();
@@ -41,6 +42,12 @@ pub fn start(screen : ~Screen, title : &str, w : uint, h : uint) {
 		loop {
 			match window.poll_event() {
 				event::NoEvent => break,
+				event::KeyPressed{code, ..} => {
+					s.key_press(&mut game, &mut window, code);
+				}
+				event::KeyReleased{code, ..} => {
+					s.key_release(&mut game, &mut window, code);
+				}
 				e => {
 					if !s.event(&mut game, &mut window, e) {
 						event_default(&mut window, e);
@@ -54,20 +61,19 @@ pub fn start(screen : ~Screen, title : &str, w : uint, h : uint) {
 
 		// switch to new state if necessary
 		match ret {
-			Some(ns) => { s = ns; },
+			Some(ns) => { s = ns; s.init(&mut game, &mut window); },
 			None => { }
 		}
 		window.display();
 
 		// clean up sounds playing
-		let mut removed : ~[uint] = ~[];
+		let mut removed : Vec<uint> = Vec::new();
 		let mut len = game.sounds.len();
 		let mut i = 0;
 		while ( i < len ) {
-			let sound = &game.sounds[i];
+			let sound = &game.sounds.get(i);
 			match sound.get_status() {
 				audio::Stopped => {
-					// game.sounds.remove(i);
 					removed.push(i);
 				}
 				_ => {}
@@ -96,7 +102,7 @@ fn event_default(window : &mut RenderWindow, event : Event) -> bool {
 ////////////////////////////
 
 pub struct Game {
-	sounds: ~[Sound],
+	sounds: Vec<Sound>,
 	music: Option<Music>
 }
 
@@ -104,7 +110,7 @@ impl Game {
 
 	pub fn new() -> Game {
 		Game {
-			sounds : ~[],
+			sounds : Vec::new(),
 			music : None
 		}
 	}
