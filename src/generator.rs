@@ -1,7 +1,7 @@
 use std::num::pow;
 use std::vec::Vec;
 use std::slice::Items;
-use rand::{Rng};
+use rand::{Rng,XorShiftRng,SeedableRng};
 use util::map_range_f32;
 
 pub struct Tile {
@@ -180,13 +180,16 @@ impl DungeonParams {
 }
 
 
-pub fn generate_default<T:Rng>(rng: &mut T) -> Dungeon {
-	generate(rng,&DungeonParams::default())
+pub fn generate_default(seed: u32) -> Dungeon {
+	generate(seed,&DungeonParams::default())
 }
 
 // TODO monsters and treasure
 // TODO stair key in second-furthest room (not adjacent to exit)
-pub fn generate<T:Rng>(rng: &mut T, params: &DungeonParams) -> Dungeon {
+pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
+
+	let seed_array = [seed+1,seed/2,seed/4,seed/8];
+	let mut rng: XorShiftRng = SeedableRng::from_seed(seed_array);
 
 	// let mut rng = task_rng();
 	let mut d = Dungeon::empty(params.map_width,params.map_height);

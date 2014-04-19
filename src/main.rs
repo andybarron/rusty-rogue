@@ -13,7 +13,5 @@ mod engine;
 mod gameplay;
 
 fn main() {
-	let seed = [1,2,3,4];
-	let mut rng: XorShiftRng = SeedableRng::from_seed(seed);
-	start(~GameplayScreen::new( &generate_default( &mut rng ) ),"Hello Dungeon",800,600);
+	start(~GameplayScreen::new( &generate_default( 0 ) ),"Hello Dungeon",800,600);
 }
