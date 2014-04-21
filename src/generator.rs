@@ -29,10 +29,12 @@ pub enum TileType {
 }
 
 pub struct Dungeon {
-	width: int,
-	height: int,
-	tiles: Vec<Tile>,
-	path_length: int
+	pub width: int,
+	pub height: int,
+	pub tiles: Vec<Tile>,
+	path_length: int,
+	pub start_coords: (int,int),
+	// end_coords: (int,int),
 }
 
 pub struct DungeonParams {
@@ -66,7 +68,9 @@ impl Dungeon {
 				let y: int = i / w;
 				Tile { x: x, y: y, t: Wall, e: None }
 			}),
-			path_length: 0
+			path_length: 0,
+			start_coords: (0,0),
+			// end_coords: (0,0),
 		}
 	}
 
@@ -388,11 +392,14 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 	//println!("Start room: {},{}",start_room.x,start_room.y);
 	//println!("End room: {},{}",end_room.x,end_room.y);
 
+	let start_x = start_room.x + start_room.w / 2;
+	let start_y = start_room.y + start_room.h / 2;
 	let set_start = d.set_tile(
-		start_room.x + start_room.w / 2,
-		start_room.y + start_room.h / 2,
+		start_x,
+		start_y,
 		StairsUp
 	);
+	d.start_coords = (start_x,start_y);
 
 	let set_end = d.set_tile(
 		end_room.x + end_room.w / 2,
@@ -441,10 +448,13 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 
 	// println!("{} total monsters", total_monsters);
 
-	// ROOM POSITIONS ARE INVALID
+	// ALL POSITIONS ARE INVALID
 	// AFTER SHRINKING!!!
 	// heeerrrppp dddeeerrrpppp
-	d.shrink();
+	// d.shrink();
+
+	// TODO do we actually want to shrink?
+
 	d
 }
 
