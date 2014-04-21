@@ -11,6 +11,7 @@ use generator::generate_default;
 mod util;
 mod generator;
 mod engine;
+mod collision;
 mod entities;
 mod gameplay;
 

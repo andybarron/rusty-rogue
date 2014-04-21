@@ -475,7 +475,7 @@ impl Dungeon {
 		}
 	}
 
-	fn shrink(&mut self) {
+	pub fn shrink(&mut self) {
 		let d = self;
 		while d.shrink_h(1,0) {
 			// println!("Removed a left column");

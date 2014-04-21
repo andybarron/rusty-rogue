@@ -30,10 +30,11 @@ fn main() {
 	for i in range(0,count) {
 		println!("Generating dungeon {}...",i);
 
-		let d = generate_default(seed+i as u32);
+		let mut d = generate_default(seed+i as u32);
 		total_w += d.width() as f32;
 		total_h += d.height() as f32;
 		total += 1.0;
+		d.shrink(); // this doesn't happen normally because of coordinate screwups
 		dungeons.push(d);
 	}
 	println!("Average size across {} dungeons was {}x{}.",count, (total_w/total).round(), (total_h/total).round());

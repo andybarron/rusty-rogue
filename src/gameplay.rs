@@ -17,6 +17,8 @@ use util::get_rc_resource;
 use util::get_sprite_coords;
 use util;
 
+use collision::CollisionResolver;
+
 use entities::Creature;
 
 pub struct GameplayScreen {
@@ -144,7 +146,7 @@ impl GameplayScreen  {
 
 		self.view.move(&pan);
 
-		let mut player = None;
+		let mut player: Option<uint> = None;
 
 		// simple bubble depth sort -- acceptable because after init,
 		// creatures swap depth values relatively rarely, and bubble
@@ -168,13 +170,15 @@ impl GameplayScreen  {
 		}
 
 		// update creatures
+		let mut i = 0;
 		for creature in self.creatures.mut_iter() {
 			creature.update_sprite();
 
 			if creature.player {
 				self.view.set_center(&creature.pos);
-				player = Some(creature);
+				player = Some(i);
 			}
+			i += 1;
 		}
 
 		// update player!
@@ -196,8 +200,27 @@ impl GameplayScreen  {
 				};
 
 				match angle {
-					None => { }
-					Some(deg) => { hero.move_polar(dist,deg); }
+					None => { /* hero.pos.x = hero.pos.x.round(); hero.pos.y = hero.pos.y.round(); */ }
+					Some(deg) => { self.creatures.get_mut(hero).move_polar(dist,deg); }
+				}
+
+				// then do collision
+				let mut hit = CollisionResolver::new();
+				let hero_box = &self.creatures.get(hero).get_bounds();
+				for i in range(0, self.creatures.len()) {
+					if i == hero { continue; }
+
+					let creature_box = &self.creatures.get(i).get_bounds();
+					let offsets = hit.resolve_weighted(hero_box,creature_box,0.0);
+					match offsets {
+						None => {},
+						Some(vectors) => {
+							let (a,b) = vectors;
+							println!("{}",offsets);
+							self.creatures.get_mut(hero).pos = self.creatures.get(hero).pos + a;
+							self.creatures.get_mut(i).pos = self.creatures.get(i).pos + b;
+						}
+					}
 				}
 			}
 		}
@@ -217,7 +240,7 @@ impl GameplayScreen  {
 		}
 
 		for creature in self.creatures.iter() {
-			window.draw(&creature.sprite);
+			creature.draw(window);
 		}
 	}
 }

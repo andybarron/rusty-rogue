@@ -1,11 +1,13 @@
 use rsfml::system::Vector2f;
 use rsfml::graphics::rc::Sprite;
+use rsfml::graphics::FloatRect;
+use rsfml::graphics::RenderWindow;
 
 pub struct Creature {
 	max_health: int,
 	health: int,
 	pub pos: Vector2f,
-	pub sprite: Sprite, // TODO some kind of Animation class
+	sprite: Sprite, // TODO some kind of Animation class
 	pub player: bool,
 }
 
@@ -32,9 +34,20 @@ impl Creature {
 		self.sprite.set_position2f( self.pos.x, self.pos.y );
 	}
 
-	pub fn move_polar(&mut self, distance: f32, angle: f32) { // degrees, i guess 
+	pub fn get_bounds(&self) -> FloatRect {
+		let mut bounds = self.sprite.get_local_bounds();
+		bounds.left += self.pos.x;
+		bounds.top += self.pos.y;
+		bounds
+	}
+
+	pub fn move_polar(&mut self, distance: f32, angle: f32) { // degrees
 		self.pos.x += distance*angle.to_radians().cos();
 		self.pos.y += distance*angle.to_radians().sin();
+	}
+
+	pub fn draw(&self, window: &mut RenderWindow) {
+		window.draw(&self.sprite);
 	}
 }
 
