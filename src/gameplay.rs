@@ -214,7 +214,7 @@ impl GameplayScreen  {
 
 				// chase player!
 				let hero_pos = self.creatures.get(hero).get_position();
-				let chase_dist = 48.0 * delta;
+				let chase_dist = 16.0 * delta;
 				for i in range(0, self.creatures.len()) {
 					if i == hero { continue; }
 
@@ -223,24 +223,6 @@ impl GameplayScreen  {
 					let (dx,dy) = (pos_dif.x,pos_dif.y);
 
 					self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
-				}
-
-				// then do collision
-				let mut hit = CollisionResolver::new();
-				let hero_box = &self.creatures.get(hero).get_bounds();
-				for i in range(0, self.creatures.len()) {
-					if i == hero { continue; }
-
-					let creature_box = &self.creatures.get(i).get_bounds();
-					let offsets = hit.resolve_weighted(hero_box,creature_box,0.5);
-					match offsets {
-						None => {},
-						Some(vectors) => {
-							let (a,b) = vectors;
-							self.creatures.get_mut(hero).move(&a);
-							self.creatures.get_mut(i).move(&b);
-						}
-					}
 				}
 
 
@@ -264,13 +246,31 @@ impl GameplayScreen  {
 		}
 
 
-		// update creature positions
+		// collision
 		let mut hit = CollisionResolver::new();
 		for i in range(0,self.creatures.len()) {
 
 			let bounds = self.creatures.get(i).get_bounds();
 			let active = self.get_active_tiles( &bounds );
 
+			// creature-creature collision
+			for j in range(0, self.creatures.len()) {
+				if i == j { continue; }
+
+				let i_box = &self.creatures.get(i).get_bounds();
+				let j_box = &self.creatures.get(j).get_bounds();
+				let offsets = hit.resolve_weighted(i_box,j_box,0.5);
+				match offsets {
+					None => {},
+					Some(vectors) => {
+						let (a,b) = vectors;
+						self.creatures.get_mut(i).move(&a);
+						self.creatures.get_mut(j).move(&b);
+					}
+				}
+			}
+
+			// creature-wall collision
 			for coords in active.iter() {
 				let idx = self.to_tile_idx(coords.clone());
 				let data = self.tiles.get(idx);

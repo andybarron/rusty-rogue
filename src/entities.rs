@@ -42,6 +42,13 @@ impl Creature {
 
 	pub fn get_bounds_trimmed(&self, trim: f32) -> FloatRect {
 		let mut bounds = self.sprite.get_global_bounds();
+		let mut reduce_h = bounds.height / 2.0;
+		let mut reduce_w = bounds.width / 4.0;
+
+		bounds.height -= reduce_h;
+		bounds.top += reduce_h;
+		bounds.width -= reduce_w;
+		bounds.left += reduce_w/2.0;
 
 		if trim != 0.0 {
 			bounds.left += trim;
