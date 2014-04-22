@@ -4,6 +4,7 @@ use std::slice::Items;
 use rand::{Rng,XorShiftRng,SeedableRng};
 use util::map_range_f32;
 
+#[deriving(Clone)]
 pub struct Tile {
 	pub x: int,
 	pub y: int,
@@ -11,6 +12,7 @@ pub struct Tile {
 	pub e: Option<Entity>
 }
 
+#[deriving(Clone)]
 pub enum Entity {
 	Monster,
 	Treasure,
@@ -18,6 +20,7 @@ pub enum Entity {
 	Missingno
 }
 
+#[deriving(Clone)]
 pub enum TileType {
 	Floor,
 	Wall,
@@ -28,6 +31,7 @@ pub enum TileType {
 	Unknown
 }
 
+#[deriving(Clone)]
 pub struct Dungeon {
 	pub width: int,
 	pub height: int,
@@ -37,6 +41,7 @@ pub struct Dungeon {
 	// end_coords: (int,int),
 }
 
+#[deriving(Clone)]
 pub struct DungeonParams {
 	room_count: int,
 	room_size_min: int,
