@@ -114,7 +114,7 @@ impl GameplayScreen  {
 		ret.creatures.push(hero);
 
 		// a bunch of monsters
-		let coords_slime = grab_tile_rect(1,12);
+		let coords_slime = grab_tile_rect(10,8);
 		let mut sprite_slime = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to load slime sprite");
 		sprite_slime.set_texture_rect(&coords_slime);
 
@@ -256,7 +256,7 @@ impl GameplayScreen  {
 			// creature-creature collision
 			for j in range(0, self.creatures.len()) {
 				if i == j { continue; }
-
+ // asdfasd
 				let i_box = &self.creatures.get(i).get_bounds();
 				let j_box = &self.creatures.get(j).get_bounds();
 				let offsets = hit.resolve_weighted(i_box,j_box,0.5);

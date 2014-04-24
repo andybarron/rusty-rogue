@@ -10,6 +10,8 @@ use generator::generate_default;
 
 mod util;
 mod generator;
+mod graph;
+// mod search;
 mod engine;
 mod collision;
 mod entities;
