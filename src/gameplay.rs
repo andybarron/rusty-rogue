@@ -114,46 +114,10 @@ impl GameplayScreen  {
 		}
 
 
-
-
-		// closure for non-diagonal connections
-		let connect_direct = |ret: &mut GameplayScreen, x: int, y: int, offset: (int,int)| {
-			let (ox,oy) = offset;
-			let x2 = x+ox;
-			let y2 = y+oy;
-			let idx2_opt = ret.to_tile_idx( (x2, y2) );
-			match idx2_opt {
-				None => false,
-				Some(idx2) => match ret.tiles.get(idx2).is_passable() {
-					false => false,
-					true => ret.graph.connect_nodes_at(x,y,x2,y2)
-				}
-			}
-		};
-
-		// closure for diagonal connections
-		let connect_diag = |ret: &mut GameplayScreen, x: int, y: int, offset: (int,int),
-				check1: (int,int), check2: (int,int)| {
-			let check1_idx_opt = ret.to_tile_idx(check1);
-			let check2_idx_opt = ret.to_tile_idx(check2);
-			match (check1_idx_opt,check2_idx_opt) {
-				(Some(check1_idx),Some(check2_idx)) => match (
-					ret.tiles.get(check1_idx).is_passable(),
-					ret.tiles.get(check2_idx).is_passable()
-				) {
-					(true,true) => connect_direct(ret,x,y,offset),
-					(_,_) => false
-				},
-				(_,_) => false
-			}
-		};
-
-
 		println!("Starting graph node loop...");
 		// loop through the graph and
 		// connect accessible nodes
 		for y in range(0,dungeon.height) {
-			println!("New row!");
 			for x in range(0,dungeon.width) {
 				let idx_opt = ret.to_tile_idx( (x, y) );
 				let idx = idx_opt.expect("Shouldn't be negative");
@@ -162,8 +126,6 @@ impl GameplayScreen  {
 					true => {
 						// only check R, DR, D, DL
 						// yay undirected graphs!
-
-						
 
 						// check R and D
 						connect_direct(&mut ret,x,y,(1,0));
@@ -191,8 +153,8 @@ impl GameplayScreen  {
 		hero.player = true;
 		ret.creatures.push(hero);
 
-		println!{"{},{}",start_x,start_y};
-		println!("{}",ret.graph.get_neighbors_at( start_x, start_y ));
+		// println!{"{},{}",start_x,start_y};
+		// println!("{}",ret.graph.get_neighbors_at( start_x, start_y ));
 
 		// a bunch of monsters
 		let coords_slime = grab_tile_rect(10,8);
@@ -307,21 +269,22 @@ impl GameplayScreen  {
 				}
 
 
-				// uncommenting this bit will paint "nearby" tiles red
-				// let active = self.get_active_tiles( hero_box );
+				// // uncommenting this bit will paint "nearby" tiles red
+				let hero_box = self.creatures.get(hero).get_bounds();
+				let active = self.get_active_tiles( &hero_box );
 
-				// for data in self.tiles.mut_iter() {
-				// 	for sprite in data.sprites.mut_iter() {
-				// 		sprite.set_color(&Color::white());
-				// 	}
-				// }
+				for data in self.tiles.mut_iter() {
+					for sprite in data.sprites.mut_iter() {
+						sprite.set_color(&Color::white());
+					}
+				}
 
-				// for coords in active.iter() {
-				// 	let idx = self.to_tile_idx(coords.clone());
-				// 	for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
-				// 		sprite.set_color(&Color::red());
-				// 	}
-				// }
+				for coords in active.iter() {
+					let idx = self.to_tile_idx(coords.clone()).expect("Aw snap");
+					for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
+						sprite.set_color(&Color::red());
+					}
+				}
 
 			}
 		}
@@ -470,5 +433,40 @@ impl TileData {
 			0 => false,
 			_ => true
 		}
+	}
+}
+
+///////////////// utility stuff
+// TODO oh god this is so messy
+
+// closure for non-diagonal connections
+fn connect_direct (ret: &mut GameplayScreen, x: int, y: int, offset: (int,int)) -> bool {
+	let (ox,oy) = offset;
+	let x2 = x+ox;
+	let y2 = y+oy;
+	let idx2_opt = ret.to_tile_idx( (x2, y2) );
+	match idx2_opt {
+		None => false,
+		Some(idx2) => match ret.tiles.get(idx2).is_passable() {
+			false => false,
+			true => ret.graph.connect_nodes_at(x,y,x2,y2)
+		}
+	}
+}
+
+// closure for diagonal connections
+fn connect_diag (ret: &mut GameplayScreen, x: int, y: int, offset: (int,int),
+		check1: (int,int), check2: (int,int)) -> bool {
+	let check1_idx_opt = ret.to_tile_idx(check1);
+	let check2_idx_opt = ret.to_tile_idx(check2);
+	match (check1_idx_opt,check2_idx_opt) {
+		(Some(check1_idx),Some(check2_idx)) => match (
+			ret.tiles.get(check1_idx).is_passable(),
+			ret.tiles.get(check2_idx).is_passable()
+		) {
+			(true,true) => connect_direct(ret,x,y,offset),
+			(_,_) => false
+		},
+		(_,_) => false
 	}
 }
