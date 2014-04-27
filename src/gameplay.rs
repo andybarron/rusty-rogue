@@ -10,6 +10,8 @@ use rsfml::graphics::FloatRect;
 use rsfml::system::Vector2f;
 use rsfml::window::keyboard;
 use rsfml::window::keyboard::Key;
+use rsfml::graphics::rc::CircleShape;
+use rsfml::graphics::rc::RectangleShape;
 
 use engine::{Game,Screen};
 use generator::{generate_default,Tile,TileType,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster};
@@ -23,11 +25,14 @@ use collision::CollisionResolver;
 use entities::Creature;
 
 use graph::Graph;
+use search::{SearchStrategy,AStarSearch};
 
 pub struct GameplayScreen {
 	tile_size: uint,
 	dungeon: Dungeon,
 	graph: Graph,
+	circles: Vec<CircleShape>,
+	lines: Vec<RectangleShape>,
 	tiles: Vec<TileData>,
 	view: View,
 	zoom_index: int,
@@ -51,6 +56,8 @@ impl GameplayScreen  {
 			tile_size: 16,
 			dungeon: dungeon.clone(),
 			graph: Graph::new(),
+			circles: Vec::new(),
+			lines: Vec::new(),
 			zoom_index: 1,
 			zoom_levels: ~[1.,2.,3.,4.],
 			tiles: Vec::new(),
@@ -124,16 +131,55 @@ impl GameplayScreen  {
 				match ret.tiles.get(idx).is_passable() {
 					false => {},
 					true => {
+						let t_sz = t_sz as f32;
+						let mut line = RectangleShape::new().expect("Rectangle faaaailure");
+						line.set_size2f( t_sz, 1.0 );
+						line.set_origin2f( 0.0, 0.5 );
+						line.set_fill_color( &Color::new_RGBA(0,255,255,150) );
 						// only check R, DR, D, DL
 						// yay undirected graphs!
 
 						// check R and D
-						connect_direct(&mut ret,x,y,(1,0));
-						connect_direct(&mut ret,x,y,(0,1));
+						let c_r = connect_direct(&mut ret,x,y,(1,0));
+						let c_d = connect_direct(&mut ret,x,y,(0,1));
 
 						// diagonal
-						connect_diag(&mut ret,x,y,(1,1),(x+1,y),(x,y+1));
-						connect_diag(&mut ret,x,y,(-1,1),(x-1,y),(x,y+1));
+						let c_dr = connect_diag(&mut ret,x,y,(1,1),(x+1,y),(x,y+1));
+						let c_dl = connect_diag(&mut ret,x,y,(-1,1),(x-1,y),(x,y+1));
+
+						// circle shape and lines
+						let radius = t_sz / 4.0;
+						let mut circle = CircleShape::new_init(radius, 8).expect("Couldn't make circle");
+						circle.set_origin2f(radius,radius);
+						circle.set_position2f(
+							x as f32 * t_sz,
+							y as f32 * t_sz
+						);
+						line.set_position(&circle.get_position());
+						circle.set_fill_color( &Color::new_RGBA(0,0,255,150) );
+						ret.circles.push(circle);
+
+						// lines
+						if c_r {
+							let mut line = line.clone().expect("c_r");
+							ret.lines.push( line );
+						}
+						if c_d {
+							let mut line = line.clone().expect("c_d");
+							line.rotate(90.0);
+							ret.lines.push( line );
+						}
+						line.scale2f((2.0 as f32).sqrt(),1.0);
+						if c_dr {
+							let mut line = line.clone().expect("c_d");
+							line.rotate(45.0);
+							ret.lines.push( line );
+						}
+						if c_dl {
+							let mut line = line.clone().expect("c_d");
+							line.rotate(135.0);
+							ret.lines.push( line );
+						}
 					}
 				}
 			}
@@ -171,6 +217,31 @@ impl GameplayScreen  {
 				}
 				_ => {}
 			}
+		}
+
+		for creature in ret.creatures.iter() {
+			if creature.player { continue; }
+
+			let pos = creature.get_position();
+			let start_coords = ret.to_tile_coords((pos.x,pos.y));
+			let end_coords = (start_x,start_y);
+
+			let path = AStarSearch::new_diagonal().solve(&ret.graph, start_coords, end_coords).
+					expect("Couldn't solve");
+
+			for coords in path.iter() {
+				let (tx,ty) = coords.clone();
+				let wx = tx as f32 * t_sz as f32; 
+				let wy = ty as f32 * t_sz as f32;
+				let radius = 6.0;
+				let mut circle = CircleShape::new_init(radius,8).expect("fahsdkfhaslkdfh");
+				circle.set_origin2f(radius,radius);
+				circle.set_position2f(wx,wy);
+				circle.set_fill_color( &Color::new_RGBA(255,0,0,150) );
+				ret.circles.push(circle);
+			}
+
+			break;
 		}
 
 		ret
@@ -387,10 +458,21 @@ impl GameplayScreen  {
 		window.set_view( get_rc_resource(self.view.new_copy().expect("Couldn't clone view")) );
 
 		window.clear(&Color::black());
+
+
+
 		for data in self.tiles.iter() {
 			for sprite in data.sprites.iter() {
 				window.draw(sprite);
 			}
+		}
+
+		for line in self.lines.iter() {
+			window.draw(line);
+		}
+
+		for circle in self.circles.iter() {
+			window.draw(circle);
 		}
 
 		for creature in self.creatures.iter() {
