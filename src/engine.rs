@@ -12,7 +12,7 @@ use rsfml::audio;
 
 use util::get_rc_resource;
 
-pub fn start(screen : ~Screen, title : &str, w : uint, h : uint) {
+pub fn launch(screen : ~Screen, title : &str, w : uint, h : uint) {
 
 	// init window
 	let setting : ContextSettings = ContextSettings::default();

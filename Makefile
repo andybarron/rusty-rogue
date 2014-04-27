@@ -1,8 +1,11 @@
 # rust compiler command
 RUSTC=rustc
 
-# location of file with main()
-MAINFILE=./src/main.rs
+# name of file with main()
+MAINFILE=main.rs
+
+# location of source files
+SRCLOC=./src
 
 # location of libraries
 LIBLOC=./lib/*
@@ -18,7 +21,7 @@ RUSTFLAGS=-L $(LIBLOC) -o $(BINLOC)/$(EXEC)
 
 # compile it
 all:
-	$(RUSTC) $(RUSTFLAGS) $(MAINFILE)
+	$(RUSTC) $(RUSTFLAGS) $(SRCLOC)/$(MAINFILE)
 
 # run it
 run:
