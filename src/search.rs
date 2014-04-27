@@ -6,12 +6,52 @@ pub trait SearchStrategy {
 	fn solve(&self, graph: &Graph, start: (int,int), end: (int,int)) -> Option<Vec<(int,int)>>;
 }
 
-pub struct AStarSearch; // TODO heuristic as field
+pub struct AStarSearch {
+	heuristic: fn(&GraphNode,&GraphNode) -> f32
+}
 
-/// functionality unique to AStar
+// functionality unique to AStar
 impl AStarSearch {
+
+	// public
+	pub fn new_euclidean() -> AStarSearch {
+		AStarSearch {
+			heuristic: AStarSearch::h_euclidean
+		}
+	}
+
+	pub fn new_diagonal() -> AStarSearch {
+		AStarSearch {
+			heuristic: AStarSearch::h_diagonal
+		}
+	}
+
+	pub fn new_dijkstra() -> AStarSearch {
+		AStarSearch {
+			heuristic: AStarSearch::h_zero
+		}
+	}
+
+	// private
+	// heuristic functions
+	fn h_euclidean(a: &GraphNode, b: &GraphNode) -> f32 {
+		a.distance_to(b)
+	}
+
+	fn h_diagonal(a: &GraphNode, b: &GraphNode) -> f32 {
+		let dx = (a.get_x() - b.get_x()).abs() as f32;
+		let dy = (a.get_y() - b.get_y()).abs() as f32;
+		let sqrt2 = (2.0 as f32).sqrt();
+		(dx+dy) + ( sqrt2 - 2.0 ) * if dx < dy { dx } else { dy }
+	}
+
+	fn h_zero(a: &GraphNode, b: &GraphNode) -> f32 {
+		0.0
+	}
+
 	fn h(&self, current: &GraphNode, end: &GraphNode) -> f32 {
-		current.distance_to(end)
+		let func = self.heuristic;
+		func(current,end)
 	}
 	fn build_node_path(&self, came_from: &HashMap<GraphNode,GraphNode>, current_node: &GraphNode) -> Vec<GraphNode> {
 		if came_from.contains_key(current_node) {
@@ -61,6 +101,7 @@ impl SearchStrategy for AStarSearch {
 		//ie while unvisited not empty
 
 		while !open.is_empty() {
+			// find node in open set with lowest f_score
 			let mut lowest_f = None;
 			let mut lowest_node = None;
 			for node in open.iter() {
@@ -70,43 +111,39 @@ impl SearchStrategy for AStarSearch {
 					lowest_node = Some(node.clone());
 				}
 			}
+			// set it to current
 			let current_node = lowest_node.expect("Didn't find current node");
-			// println!("Current: {}", current_node);
+			// if we found the goal node, return the whole path
 			if current_node == end_node {
 				let path = self.build_coord_path(&came_from,&current_node);
 				return Some(path);
 			}
+			// move current node form open set to closed set
 			open.remove(&current_node);
 			closed.insert(current_node);
+			// for all neighbors in open set... do stuff
 			for neighbor_ref in graph.get_neighbors(&current_node).expect("Couldn't find node in graph").iter() {
 				if closed.contains(neighbor_ref) {
 					continue
 				}
 				let tentative_g = g_score.find(&current_node).expect("NO g score for cur")
 					+ current_node.distance_to(neighbor_ref);
+				// update f and g scores for unvisisted neighbors
 				if !open.contains(neighbor_ref) ||
 						tentative_g < *g_score.find(neighbor_ref).expect("NO g for neighbor") {
 					came_from.insert(neighbor_ref.clone(), current_node);
 					g_score.insert(neighbor_ref.clone(), tentative_g);
 					f_score.insert(neighbor_ref.clone(), g_score.find(neighbor_ref).expect("NO g for neighbor")
 						+ self.h(neighbor_ref,&end_node));
+					// insert neighbor into open set
 					if !open.contains(neighbor_ref) {
 						open.insert(neighbor_ref.clone());
 					}
 				}
 			}
 		}
-
-
-
-		None // TODO so it compiles
+		None // if we haven't found a solution, it's impossible :'(
 	}
-
-// D = 1, D2 = sqrt(2)
-// function heuristic(node) =
-//    dx = abs(node.x - goal.x)
-//    dy = abs(node.y - goal.y)
-//    return D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
 
 
 }

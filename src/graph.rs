@@ -6,8 +6,8 @@ pub struct Graph {
 	node_map: HashMap<GraphNode, HashSet<GraphNode>>,
 }
 
-/// UNDIRECTED graph implementation
-// TODO remove_node methods
+// UNDIRECTED graph implementation
+// TODO return references to nodes rather than clones...
 impl Graph {
 
 	pub fn new() -> Graph {
@@ -49,6 +49,13 @@ impl Graph {
 		match self.find_node_at(x,y) {
 			None => false,
 			Some(ref node) => self.remove_node(node)
+		}
+	}
+
+	pub fn get_neighbors_at(&self, x: int, y: int) -> Option<HashSet<GraphNode>> {
+		match self.find_node_at(x,y) {
+			None => None,
+			Some(ref tile) => self.get_neighbors(tile)
 		}
 	}
 

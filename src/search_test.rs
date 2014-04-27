@@ -10,8 +10,8 @@ mod graph;
 mod search;
 
 fn print_graph(graph: &Graph, w: int, h: int, path: Option<Vec<(int,int)>>) {
-	for y in range(0,w) {
-		for x in range(0,h) {
+	for y in range(0,h) {
+		for x in range(0,w) {
 			let ch = match graph.find_node_at(x,y) {
 				None => ' ',
 				Some(node) => match path {
@@ -31,9 +31,9 @@ fn print_graph(graph: &Graph, w: int, h: int, path: Option<Vec<(int,int)>>) {
 fn main() {
 
 	let mut graph = Graph::new();
-	let w = 10;
-	let h = 10;
-	let obstacle_count = 25;
+	let w = 80;
+	let h = 40;
+	let obstacle_count = 80*60/10;
 	let start = (0,0);
 	let end = (w-1,h-1);
 
@@ -91,8 +91,8 @@ fn main() {
 
 	print_graph(&graph,w,h,None);
 
-	let search = AStarSearch;
-	match search.solve(&graph,(0,0),(9,9)) {
+	let search = AStarSearch::new_diagonal();
+	match search.solve(&graph,start,end) {
 		Some(soln) => {
 			println!("Solution: {}",soln);
 			print_graph(&graph,w,h,Some(soln));

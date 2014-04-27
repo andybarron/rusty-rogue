@@ -22,9 +22,12 @@ use collision::CollisionResolver;
 
 use entities::Creature;
 
+use graph::Graph;
+
 pub struct GameplayScreen {
 	tile_size: uint,
 	dungeon: Dungeon,
+	graph: Graph,
 	tiles: Vec<TileData>,
 	view: View,
 	zoom_index: int,
@@ -47,6 +50,7 @@ impl GameplayScreen  {
 		let mut ret = GameplayScreen {
 			tile_size: 16,
 			dungeon: dungeon.clone(),
+			graph: Graph::new(),
 			zoom_index: 1,
 			zoom_levels: ~[1.,2.,3.,4.],
 			tiles: Vec::new(),
@@ -55,7 +59,7 @@ impl GameplayScreen  {
 		};
 
 		// closure to get tile coordinates from tile x/y index
-		// i.e. top left tile is (0,0)
+		// i.e. top left tile in texture atlas is (0,0)
 		let t_sz = ret.tile_size;
 		let grab_tile_rect = |x: uint, y: uint| -> IntRect {
 			let (tx,ty) = get_sprite_coords(x,y,t_sz,t_sz);
@@ -101,6 +105,80 @@ impl GameplayScreen  {
 			ret.tiles.push(tile_data);
 		}
 
+		println!("Initializing graph...");
+		// initialize graph
+		for y in range(0,dungeon.height) {
+			for x in range(0,dungeon.width) {
+				ret.graph.add_node_at(x,y);
+			}
+		}
+
+
+
+
+		// closure for non-diagonal connections
+		let connect_direct = |ret: &mut GameplayScreen, x: int, y: int, offset: (int,int)| {
+			let (ox,oy) = offset;
+			let x2 = x+ox;
+			let y2 = y+oy;
+			let idx2_opt = ret.to_tile_idx( (x2, y2) );
+			match idx2_opt {
+				None => false,
+				Some(idx2) => match ret.tiles.get(idx2).is_passable() {
+					false => false,
+					true => ret.graph.connect_nodes_at(x,y,x2,y2)
+				}
+			}
+		};
+
+		// closure for diagonal connections
+		let connect_diag = |ret: &mut GameplayScreen, x: int, y: int, offset: (int,int),
+				check1: (int,int), check2: (int,int)| {
+			let check1_idx_opt = ret.to_tile_idx(check1);
+			let check2_idx_opt = ret.to_tile_idx(check2);
+			match (check1_idx_opt,check2_idx_opt) {
+				(Some(check1_idx),Some(check2_idx)) => match (
+					ret.tiles.get(check1_idx).is_passable(),
+					ret.tiles.get(check2_idx).is_passable()
+				) {
+					(true,true) => connect_direct(ret,x,y,offset),
+					(_,_) => false
+				},
+				(_,_) => false
+			}
+		};
+
+
+		println!("Starting graph node loop...");
+		// loop through the graph and
+		// connect accessible nodes
+		for y in range(0,dungeon.height) {
+			println!("New row!");
+			for x in range(0,dungeon.width) {
+				let idx_opt = ret.to_tile_idx( (x, y) );
+				let idx = idx_opt.expect("Shouldn't be negative");
+				match ret.tiles.get(idx).is_passable() {
+					false => {},
+					true => {
+						// only check R, DR, D, DL
+						// yay undirected graphs!
+
+						
+
+						// check R and D
+						connect_direct(&mut ret,x,y,(1,0));
+						connect_direct(&mut ret,x,y,(0,1));
+
+						// diagonal
+						connect_diag(&mut ret,x,y,(1,1),(x+1,y),(x,y+1));
+						connect_diag(&mut ret,x,y,(-1,1),(x-1,y),(x,y+1));
+					}
+				}
+			}
+		}
+		println!("Done with graph!");
+
+
 		// load up player sprite
 		let coords_hero = grab_tile_rect(4,8);
 		let mut sprite_hero = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to create hero sprite");
@@ -112,6 +190,9 @@ impl GameplayScreen  {
 		hero.set_position2f( (start_x*t_sz as int) as f32, (start_y*t_sz as int) as f32 );
 		hero.player = true;
 		ret.creatures.push(hero);
+
+		println!{"{},{}",start_x,start_y};
+		println!("{}",ret.graph.get_neighbors_at( start_x, start_y ));
 
 		// a bunch of monsters
 		let coords_slime = grab_tile_rect(10,8);
@@ -272,7 +353,7 @@ impl GameplayScreen  {
 
 			// creature-wall collision
 			for coords in active.iter() {
-				let idx = self.to_tile_idx(coords.clone());
+				let idx = self.to_tile_idx(coords.clone()).expect("Can't collide creature/wall for negative index");
 				let data = self.tiles.get(idx);
 				if !data.is_passable()	{
 					let creature = self.creatures.get_mut(i);
@@ -298,7 +379,7 @@ impl GameplayScreen  {
 		}
 	}
 
-	fn get_active_tiles(&self, bounds: &FloatRect) -> Vec<(uint,uint)> {
+	fn get_active_tiles(&self, bounds: &FloatRect) -> Vec<(int,int)> {
 		let mut active_tiles = Vec::new();
 
 		let top_left = (bounds.left,bounds.top);
@@ -319,20 +400,23 @@ impl GameplayScreen  {
 		active_tiles
 	}
 
-	fn to_tile_coords(&self, pos: (f32, f32) ) -> (uint,uint) {
+	fn to_tile_coords(&self, pos: (f32, f32) ) -> (int,int) {
 		let (x,y) = pos;
 		(self.to_coord_idx(x), self.to_coord_idx(y))
 	}
 
-	fn to_coord_idx(&self, coord: f32) -> uint {
+	fn to_coord_idx(&self, coord: f32) -> int {
 		let t_size = self.tile_size as f32;
 		let t_half = self.tile_size as f32 / 2.0;
-		((coord + t_half)/t_size).floor() as uint
+		((coord + t_half)/t_size).floor() as int
 	}
 
-	fn to_tile_idx(&self, tile_coords: (uint,uint) ) -> uint {
+	fn to_tile_idx(&self, tile_coords: (int,int) ) -> Option<uint> {
 		let (x_idx,y_idx) = tile_coords;
-		x_idx+y_idx*(self.dungeon.width as uint)
+
+		if x_idx < 0 || y_idx < 0 { return None; }
+
+		Some( (x_idx+y_idx*(self.dungeon.width)) as uint)
 	}
 
 	fn draw(&self, game : &mut Game, window : &mut RenderWindow) {
