@@ -65,7 +65,7 @@ fn main() {
 
 	// connect nodes
 	for y in range (0,h-1) {
-		for x in range (0,h-1) {
+		for x in range (0,w-1) {
 			match graph.find_node_at(x,y) {
 				Some(node) => {
 					// right
