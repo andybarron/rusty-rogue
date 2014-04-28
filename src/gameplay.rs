@@ -197,7 +197,6 @@ impl GameplayScreen  {
 		let (start_x, start_y) = dungeon.start_coords;
 		hero.set_position2f( (start_x*t_sz as int) as f32, (start_y*t_sz as int) as f32 );
 		hero.player = true;
-		ret.creatures.push(hero);
 
 		// println!{"{},{}",start_x,start_y};
 		// println!("{}",ret.graph.get_neighbors_at( start_x, start_y ));
@@ -219,15 +218,17 @@ impl GameplayScreen  {
 			}
 		}
 
-		for creature in ret.creatures.iter() {
-			if creature.player { continue; }
+		println!("Starting A*...");
+		for i in range(0,ret.creatures.len()) {
+			if ret.creatures.get(i).player { continue; }
 
-			let pos = creature.get_position();
+			let pos = ret.creatures.get(i).get_position();
 			let start_coords = ret.to_tile_coords((pos.x,pos.y));
 			let end_coords = (start_x,start_y);
 
 			let path = AStarSearch::new_diagonal().solve(&ret.graph, start_coords, end_coords).
 					expect("Couldn't solve");
+
 
 			for coords in path.iter() {
 				let (tx,ty) = coords.clone();
@@ -241,9 +242,14 @@ impl GameplayScreen  {
 				ret.circles.push(circle);
 			}
 
+			ret.creatures.get_mut(i).path = Some(path);
+			hero.set_position( &ret.creatures.get(i).get_position() );
+
 			break;
 		}
+		println!("DONE!");
 
+		ret.creatures.push(hero);
 		ret
 	}
 
@@ -328,15 +334,47 @@ impl GameplayScreen  {
 
 				// chase player!
 				let hero_pos = self.creatures.get(hero).get_position();
-				let chase_dist = 16.0 * delta;
+				let chase_dist = 4.0 * delta;
 				for i in range(0, self.creatures.len()) {
 					if i == hero { continue; }
 
 					let monster_pos = self.creatures.get(i).get_position();
-					let pos_dif = hero_pos - monster_pos;
-					let (dx,dy) = (pos_dif.x,pos_dif.y);
 
-					self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+					let path = self.creatures.get(i).path.clone();
+					match path {
+						None => {
+							let pos_dif = hero_pos - monster_pos;
+							let (dx,dy) = (pos_dif.x,pos_dif.y);
+
+							//self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+						}
+						Some(vec) => {
+							let tsz = self.tile_size as f32;
+							let first_coords = vec.get(i).clone();
+							let (tx,ty) = first_coords;
+							let (wx,wy) = (
+								tx as f32 * tsz,
+								ty as f32 * tsz
+							);
+							let wv = Vector2f::new(wx,wy);
+
+
+							let pos_dif = wv - monster_pos;
+							let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
+							if dif_len < chase_dist {
+								let mut cr = self.creatures.get_mut(i);
+								cr.set_position(&wv);
+								cr.pop_path_node();
+								println!("{}->{}",first_coords,cr.path.clone().unwrap().get(0));
+								// TODO set back to None
+							} else {
+								let (dx,dy) = (pos_dif.x,pos_dif.y);
+								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+							}
+							println!("{},{}",tx,ty);
+							//println!("{}",pos_dif);
+						}
+					}
 				}
 
 
@@ -379,8 +417,8 @@ impl GameplayScreen  {
 					None => {},
 					Some(vectors) => {
 						let (a,b) = vectors;
-						self.creatures.get_mut(i).move(&a);
-						self.creatures.get_mut(j).move(&b);
+						//self.creatures.get_mut(i).move(&a);
+						//self.creatures.get_mut(j).move(&b);
 					}
 				}
 			}
