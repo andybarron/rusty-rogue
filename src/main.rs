@@ -13,6 +13,7 @@ mod util;
 mod generator;
 mod graph;
 mod search;
+mod solver;
 mod engine;
 mod collision;
 mod entities;

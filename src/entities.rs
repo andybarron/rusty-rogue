@@ -9,7 +9,7 @@ pub struct Creature {
 	pos: Vector2f,
 	sprite: Sprite, // TODO some kind of Animation class
 	pub player: bool,
-	pub path: Option<Vec<(int,int)>>
+	path: Vec<(int,int)>
 }
 
 impl Creature {
@@ -22,7 +22,7 @@ impl Creature {
 			pos: Vector2f::new(0.0,0.0),
 			sprite: sprite,
 			player: false,
-			path: None,
+			path: Vec::new(),
 		};
 
 		// TODO better sprite origin calculation?
@@ -96,14 +96,26 @@ impl Creature {
 		self.pos
 	}
 
+	pub fn has_path(&self) -> bool {
+		self.path.len() > 0
+	}
+
 	pub fn pop_path_node(&mut self) -> bool {
-		match self.path {
-			None => false,
-			Some(ref mut path) => {
-				path.remove(0).is_some()
-			}
+		self.path.remove(0).is_some()
+	}
+
+	pub fn set_path(&mut self, path: &Vec<(int,int)>) {
+		self.path.clear();
+		self.path = path.clone();
+	}
+
+	pub fn get_target_node(&self) -> Option<(int,int)> {
+		match self.has_path() {
+			false => None,
+			true => Some(self.path.get(0).clone())
 		}
 	}
+	
 }
 
 impl Clone for Creature {

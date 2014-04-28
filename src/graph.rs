@@ -2,6 +2,7 @@
 use std::num::pow;
 use collections::hashmap::{HashMap,HashSet};
 
+#[deriving(Clone)]
 pub struct Graph {
 	node_map: HashMap<GraphNode, HashSet<GraphNode>>,
 }

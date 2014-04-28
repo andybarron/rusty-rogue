@@ -1,5 +1,7 @@
 // TODO custom tile culling so we don't draw the entire level every frame
 
+use std::mem::swap;
+
 use rsfml::graphics::RenderWindow;
 use rsfml::graphics::View;
 use rsfml::graphics::Texture;
@@ -38,6 +40,7 @@ pub struct GameplayScreen {
 	zoom_index: int,
 	zoom_levels: ~[f32],
 	creatures: Vec<Creature>,
+	debug: bool,
 }
 
 impl GameplayScreen  {
@@ -63,6 +66,7 @@ impl GameplayScreen  {
 			tiles: Vec::new(),
 			view: View::new().expect("Failed to create View"),
 			creatures: Vec::new(),
+			debug: false
 		};
 
 		// closure to get tile coordinates from tile x/y index
@@ -100,7 +104,7 @@ impl GameplayScreen  {
 			// load sprite from texture and add to tile list
 			let half = t_sz as f32/2.0;
 			let bounds = FloatRect::new( x as f32 - half, y as f32 - half, t_sz as f32, t_sz as f32 );
-			let mut tile_data = TileData::new(&bounds);
+			let mut tile_data = TileData::new(&bounds,tile);
 			for coords in tile_coords.iter() {
 				let mut spr = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to create sprite");
 				spr.set_texture_rect(coords);
@@ -220,6 +224,7 @@ impl GameplayScreen  {
 
 		println!("Starting A*...");
 		for i in range(0,ret.creatures.len()) {
+			break;
 			if ret.creatures.get(i).player { continue; }
 
 			let pos = ret.creatures.get(i).get_position();
@@ -242,10 +247,10 @@ impl GameplayScreen  {
 				ret.circles.push(circle);
 			}
 
-			ret.creatures.get_mut(i).path = Some(path);
-			hero.set_position( &ret.creatures.get(i).get_position() );
+			ret.creatures.get_mut(i).set_path(&path);
+			// hero.set_position( &ret.creatures.get(i).get_position() );
 
-			break;
+			// break;
 		}
 		println!("DONE!");
 
@@ -334,23 +339,25 @@ impl GameplayScreen  {
 
 				// chase player!
 				let hero_pos = self.creatures.get(hero).get_position();
-				let chase_dist = 4.0 * delta;
+				let chase_dist = 16.0 * delta;
 				for i in range(0, self.creatures.len()) {
 					if i == hero { continue; }
 
 					let monster_pos = self.creatures.get(i).get_position();
 
-					let path = self.creatures.get(i).path.clone();
-					match path {
-						None => {
-							let pos_dif = hero_pos - monster_pos;
-							let (dx,dy) = (pos_dif.x,pos_dif.y);
+					let has_path = self.creatures.get(i).has_path();
+					match has_path {
+						false => {
+							if self.los(&hero_pos,&monster_pos) {
+								let pos_dif = hero_pos - monster_pos;
+								let (dx,dy) = (pos_dif.x,pos_dif.y);
 
-							//self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+							}
 						}
-						Some(vec) => {
+						true => {
 							let tsz = self.tile_size as f32;
-							let first_coords = vec.get(i).clone();
+							let first_coords = self.creatures.get(i).get_target_node().expect("UGH");
 							let (tx,ty) = first_coords;
 							let (wx,wy) = (
 								tx as f32 * tsz,
@@ -365,20 +372,16 @@ impl GameplayScreen  {
 								let mut cr = self.creatures.get_mut(i);
 								cr.set_position(&wv);
 								cr.pop_path_node();
-								println!("{}->{}",first_coords,cr.path.clone().unwrap().get(0));
-								// TODO set back to None
 							} else {
 								let (dx,dy) = (pos_dif.x,pos_dif.y);
 								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
 							}
-							println!("{},{}",tx,ty);
-							//println!("{}",pos_dif);
 						}
 					}
 				}
 
 
-				// // uncommenting this bit will paint "nearby" tiles red
+				// // uncommenting this bit will paint "nearby" tiles
 				let hero_box = self.creatures.get(hero).get_bounds();
 				let active = self.get_active_tiles( &hero_box );
 
@@ -391,10 +394,9 @@ impl GameplayScreen  {
 				for coords in active.iter() {
 					let idx = self.to_tile_idx(coords.clone()).expect("Aw snap");
 					for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
-						sprite.set_color(&Color::red());
+						sprite.set_color(&Color::green());
 					}
 				}
-
 			}
 		}
 
@@ -409,7 +411,7 @@ impl GameplayScreen  {
 			// creature-creature collision
 			for j in range(0, self.creatures.len()) {
 				if i == j { continue; }
- // asdfasd
+
 				let i_box = &self.creatures.get(i).get_bounds();
 				let j_box = &self.creatures.get(j).get_bounds();
 				let offsets = hit.resolve_weighted(i_box,j_box,0.5);
@@ -417,8 +419,8 @@ impl GameplayScreen  {
 					None => {},
 					Some(vectors) => {
 						let (a,b) = vectors;
-						//self.creatures.get_mut(i).move(&a);
-						//self.creatures.get_mut(j).move(&b);
+						self.creatures.get_mut(i).move(&a);
+						self.creatures.get_mut(j).move(&b);
 					}
 				}
 			}
@@ -497,26 +499,141 @@ impl GameplayScreen  {
 
 		window.clear(&Color::black());
 
+		let mut hero_tile_coords = None;
+		let mut hero_pos = None;
 
-
-		for data in self.tiles.iter() {
-			for sprite in data.sprites.iter() {
-				window.draw(sprite);
+		for creature in self.creatures.iter() {
+			if creature.player {
+				let pos = creature.get_position();
+				hero_pos = Some(pos);
+				hero_tile_coords = Some(self.to_tile_coords( (pos.x,pos.y) ));
+				break;
 			}
 		}
 
-		for line in self.lines.iter() {
-			window.draw(line);
+		for data in self.tiles.iter() {
+			for sprite in data.sprites.iter() {
+				match hero_tile_coords {
+					None => window.draw(sprite),
+					Some(coords) => {
+						let (x,y) = coords;
+						if self.debug || data.seen || self.los_coords(x,y,data.tile.x,data.tile.y) {
+							window.draw(sprite);
+						}
+					}
+				}
+			}
 		}
+		if self.debug {
+			for line in self.lines.iter() {
+				window.draw(line);
+			}
 
-		for circle in self.circles.iter() {
-			window.draw(circle);
+			for circle in self.circles.iter() {
+				window.draw(circle);
+			}
 		}
-
 		for creature in self.creatures.iter() {
-			creature.draw(window);
+			match hero_pos {
+				None => creature.draw(window),
+				Some(ref pos) => {
+					if self.debug || self.los(pos,&creature.get_position()) {
+						creature.draw(window);
+					}
+				}
+			}
 		}
 	}
+
+	fn los(&self, a: &Vector2f, b: &Vector2f) -> bool {
+		let (ax,ay) = self.to_tile_coords((a.x,a.y));
+		let (bx,by) = self.to_tile_coords((b.x,b.y));
+		self.los_coords(ax,ay,bx,by)
+	}
+
+	fn get_tile_los(&self, coords: (int,int) ) -> bool {
+		let idx = self.to_tile_idx( coords ).expect("FAILED getting tile LOS");
+		self.tiles.get(idx).is_clear()
+	}
+
+	fn los_coords(&self, x1: int, y1: int, x2: int, y2: int) -> bool {
+		let mut xstep;
+		let mut ystep;
+		let mut error;
+		let mut error_prev;
+		let mut x = x1;
+		let mut y = y1;
+		let mut dx = x2 - x1;
+		let mut dy = y2 - y1;
+		let mut points = Vec::new();
+		points.push((x1,y1));
+		if dx < 0 {
+			xstep = -1;
+			dx *= -1;
+		} else {
+			xstep = 1;
+		}
+		if dy < 0 {
+			ystep = -1;
+			dy *= -1;
+		} else {
+			ystep = 1;
+		}
+		let ddx = 2*dx;
+		let ddy = 2*dy;
+		if ddx >= ddy {
+			error = dx;
+			error_prev = error;
+			for i in range(0,dx) {
+				x += xstep;
+				error += ddy;
+				if error > ddx {
+					y += ystep;
+					error -= ddx;
+					if error + error_prev < ddx {
+						points.push((x,y-ystep));
+					} else if error + error_prev > ddx {
+						points.push((x-xstep,y));
+					} else {
+						points.push((x,y-ystep));
+						points.push((x-xstep,y));
+					}
+				}
+				points.push((x,y));
+				error_prev = error;
+			}
+		} else {
+			error = dy;
+			error_prev = error;
+			for i in range(0,dy) {
+				y += ystep;
+				error += ddx;
+				if error > ddy {
+					x += xstep;
+					error -= ddy;
+					if error + error_prev < ddy {
+						points.push((x-xstep,y));
+					} else if error + error_prev > ddy {
+						points.push((x,y-ystep));
+					} else {
+						points.push((x-xstep,y));
+						points.push((x,y-ystep));
+					}
+				}
+				points.push((x,y));
+				error_prev = error;
+			}
+		}
+
+		for coords in points.iter() {
+			if !self.get_tile_los(*coords) {
+				return false;
+			}
+		}
+
+		true
+	}
+
 }
 
 impl Screen for GameplayScreen {
@@ -526,6 +643,7 @@ impl Screen for GameplayScreen {
 		match key {
 			keyboard::Comma => {self.zoom_index -= 1;true}
 			keyboard::Period => {self.zoom_index += 1;true}
+			keyboard::BackSlash => {self.debug = !self.debug;true}
 			_ => false
 		}
 	}
@@ -541,18 +659,23 @@ impl Screen for GameplayScreen {
 
 struct TileData {
 	pub sprites: Vec<Sprite>,
-	pub bounds: FloatRect
+	pub bounds: FloatRect,
+	pub tile: Tile,
+	pub seen: bool,
 }
 
 impl TileData {
-	pub fn new(bounds: &FloatRect) -> TileData {
-		TileData { sprites: Vec::new(), bounds: bounds.clone() }
+	pub fn new(bounds: &FloatRect, tile: &Tile) -> TileData {
+		TileData { sprites: Vec::new(), bounds: bounds.clone(), tile: tile.clone(), seen: false }
 	}
 	pub fn is_passable(&self) -> bool {
 		match self.sprites.len() {
 			0 => false,
 			_ => true
 		}
+	}
+	pub fn is_clear(&self) -> bool {
+		self.is_passable()
 	}
 }
 
