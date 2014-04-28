@@ -3,6 +3,7 @@ use rsfml::window::{VideoMode, ContextSettings, Close, event, keyboard};
 use rsfml::window::keyboard::Key;
 use rsfml::window::event::Event;
 use rsfml::system::{Clock, Time, sleep, Vector2f};
+use rsfml::graphics::{Color,Vertex,VertexArray,Lines};
 
 use rsfml::audio::SoundBuffer;
 use rsfml::audio::rc::Sound;
@@ -12,11 +13,11 @@ use rsfml::audio;
 
 use util::get_rc_resource;
 
-pub fn launch(screen : ~Screen, title : &str, w : uint, h : uint) {
+pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 
 	// init window
-	let setting : ContextSettings = ContextSettings::default();
-	let mut window : RenderWindow = RenderWindow::new(VideoMode::new_init(w, h, 32),
+	let setting: ContextSettings = ContextSettings::default();
+	let mut window: RenderWindow = RenderWindow::new(VideoMode::new_init(w, h, 32),
 			title, Close, &setting).expect("Cannot create a new Render Window.");
 	window.set_vertical_sync_enabled(true);
 	window.set_key_repeat_enabled(false);
@@ -67,7 +68,7 @@ pub fn launch(screen : ~Screen, title : &str, w : uint, h : uint) {
 		window.display();
 
 		// clean up sounds playing
-		let mut removed : Vec<uint> = Vec::new();
+		let mut removed: Vec<uint> = Vec::new();
 		let mut len = game.sounds.len();
 		let mut i = 0;
 		while ( i < len ) {
@@ -89,7 +90,7 @@ pub fn launch(screen : ~Screen, title : &str, w : uint, h : uint) {
 	}
 }
 
-fn event_default(window : &mut RenderWindow, event : Event) -> bool {
+fn event_default(window: &mut RenderWindow, event: Event) -> bool {
 	match event {
 		event::Closed => window.close(),
 		_ => return false
@@ -103,19 +104,35 @@ fn event_default(window : &mut RenderWindow, event : Event) -> bool {
 
 pub struct Game {
 	sounds: Vec<Sound>,
-	music: Option<Music>
+	music: Option<Music>,
+	va: VertexArray,
 }
 
 impl Game {
 
 	pub fn new() -> Game {
 		Game {
-			sounds : Vec::new(),
-			music : None
+			sounds: Vec::new(),
+			music: None,
+			va: VertexArray::new().expect("Couldn't create VertexArray for Game"),
 		}
 	}
 
-	pub fn play_sound_buffer(&mut self, buffer : &SoundBuffer) {
+	pub fn draw_line(&mut self, window: &mut RenderWindow, start: &Vector2f, end: &Vector2f, color: &Color) {
+		let mut a = Vertex::default();
+		let mut b = Vertex::default();
+		a.position = *start;
+		b.position = *end;
+		a.color = *color;
+		b.color = *color;
+		self.va.resize(2);
+		*self.va.get_vertex(0) = a;
+		*self.va.get_vertex(1) = b;
+		self.va.set_primitive_type(Lines);
+		window.draw(&self.va);
+	}
+
+	pub fn play_sound_buffer(&mut self, buffer: &SoundBuffer) {
 		let buf = buffer.clone().expect("Error cloning buffer reference");
 		let rc_buf = get_rc_resource( buf );
 		let mut sound = Sound::new_with_buffer( rc_buf ).expect("Error creating sound from buffer");
@@ -123,7 +140,7 @@ impl Game {
 		self.sounds.push(sound);
 	}
 
-	pub fn loop_music_file(&mut self, song_path : &str) {
+	pub fn loop_music_file(&mut self, song_path: &str) {
 		let mut song = Music::new_from_file(song_path).expect("Error loading music file");
 		song.set_loop(true);
 		song.play();
@@ -141,11 +158,11 @@ impl Game {
 ///////////////////////////
 
 pub trait Screen {
-	fn init(&mut self, game : &mut Game, window : &mut RenderWindow) { /* empty by default */ }
-	fn update(&mut self, game : &mut Game, window : &mut RenderWindow, delta : f32) -> Option<~Screen>;
-	fn event(&mut self, game : &mut Game, window : &mut RenderWindow, event : Event) -> bool { false }
-	fn key_press(&mut self, game : &mut Game, window : &mut RenderWindow, key : Key) -> bool { false }
-	fn key_release(&mut self, game : &mut Game, window : &mut RenderWindow, key : Key) -> bool { false }
+	fn init(&mut self, game: &mut Game, window: &mut RenderWindow) { /* empty by default */ }
+	fn update(&mut self, game: &mut Game, window: &mut RenderWindow, delta: f32) -> Option<~Screen>;
+	fn event(&mut self, game: &mut Game, window: &mut RenderWindow, event: Event) -> bool { false }
+	fn key_press(&mut self, game: &mut Game, window: &mut RenderWindow, key: Key) -> bool { false }
+	fn key_release(&mut self, game: &mut Game, window: &mut RenderWindow, key: Key) -> bool { false }
 }
 
 //////////////////
@@ -153,18 +170,18 @@ pub trait Screen {
 //////////////////
 
 pub struct Timer {
-	clock : Clock,
-	min_delta : Time,
-	max_delta : Time
+	clock: Clock,
+	min_delta: Time,
+	max_delta: Time
 }
 
 impl Timer {
 
 	pub fn new() -> Timer {
 		Timer {
-			clock : Clock::new(),
-			min_delta : Time::with_seconds(0.),
-			max_delta : Time::with_seconds(1./20.)
+			clock: Clock::new(),
+			min_delta: Time::with_seconds(0.),
+			max_delta: Time::with_seconds(1./20.)
 		}
 	}
 

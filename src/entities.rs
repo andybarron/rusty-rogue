@@ -119,6 +119,13 @@ impl Creature {
 			true => Some(self.path.get(0).clone())
 		}
 	}
+
+	pub fn get_path(&self) -> Option<Vec<(int,int)>> {
+		match self.path.len() {
+			0 => None,
+			_ => Some(self.path.clone())
+		}
+	}
 	
 }
 

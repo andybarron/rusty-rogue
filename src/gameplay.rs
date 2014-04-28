@@ -1,5 +1,3 @@
-// TODO custom tile culling so we don't draw the entire level every frame
-
 use std::mem::swap;
 use collections::hashmap::HashMap;
 
@@ -35,16 +33,16 @@ static SOLVER_THREAD_COUNT : uint = 8;
 
 pub struct GameplayScreen {
 	tile_size: uint,
+	tile_sizef: f32,
 	dungeon: Dungeon,
 	graph: Graph,
-	circles: Vec<CircleShape>,
-	lines: Vec<RectangleShape>,
 	tiles: Vec<TileData>,
 	view: View,
 	zoom_index: int,
 	zoom_levels: ~[f32],
 	creatures: Vec<Creature>,
 	debug: bool,
+	debug_node_circle: CircleShape,
 	solvers: Vec<Solver>,
 	path_count: uint,
 }
@@ -60,22 +58,27 @@ impl GameplayScreen  {
 		// get refcounted version for rc::Sprite
 		let rc_tex = get_rc_resource(tex);
 
+		let tsz_init = 16;
+		let debug_node_radius = tsz_init as f32 / 4.0;
+
 		// init screen
 		let mut ret = GameplayScreen {
-			tile_size: 16,
+			tile_size: tsz_init,
+			tile_sizef: tsz_init as f32,
 			dungeon: dungeon.clone(),
 			graph: Graph::new(),
-			circles: Vec::new(),
-			lines: Vec::new(),
 			zoom_index: 1,
 			zoom_levels: ~[1.,2.,3.,4.],
 			tiles: Vec::new(),
 			view: View::new().expect("Failed to create View"),
 			creatures: Vec::new(),
 			debug: false,
+			debug_node_circle: CircleShape::new_init(debug_node_radius, 8).expect("Failed to make debug node circle"),
 			solvers: Vec::new(),
 			path_count: 0,
 		};
+		ret.debug_node_circle.set_origin2f(debug_node_radius,debug_node_radius);
+		ret.debug_node_circle.set_fill_color( &Color::new_RGBA(0,0,255,150) );
 
 		for _ in range (0,SOLVER_THREAD_COUNT) {
 			ret.solvers.push(Solver::new());
@@ -145,7 +148,7 @@ impl GameplayScreen  {
 				let idx_opt = ret.to_tile_idx( (x, y) );
 				let idx = idx_opt.expect("Shouldn't be negative");
 				match ret.tiles.get(idx).is_passable() {
-					false => {},
+					false => {}
 					true => {
 						let t_sz = t_sz as f32;
 						let mut line = RectangleShape::new().expect("Rectangle faaaailure");
@@ -156,46 +159,13 @@ impl GameplayScreen  {
 						// yay undirected graphs!
 
 						// check R and D
-						let c_r = connect_direct(&mut ret,x,y,(1,0));
-						let c_d = connect_direct(&mut ret,x,y,(0,1));
+						let c_r = ret.connect_direct(x,y,(1,0));
+						let c_d = ret.connect_direct(x,y,(0,1));
 
 						// diagonal
-						let c_dr = connect_diag(&mut ret,x,y,(1,1),(x+1,y),(x,y+1));
-						let c_dl = connect_diag(&mut ret,x,y,(-1,1),(x-1,y),(x,y+1));
+						let c_dr = ret.connect_diag(x,y,(1,1),(x+1,y),(x,y+1));
+						let c_dl = ret.connect_diag(x,y,(-1,1),(x-1,y),(x,y+1));
 
-						// circle shape and lines
-						let radius = t_sz / 4.0;
-						let mut circle = CircleShape::new_init(radius, 8).expect("Couldn't make circle");
-						circle.set_origin2f(radius,radius);
-						circle.set_position2f(
-							x as f32 * t_sz,
-							y as f32 * t_sz
-						);
-						line.set_position(&circle.get_position());
-						circle.set_fill_color( &Color::new_RGBA(0,0,255,150) );
-						ret.circles.push(circle);
-
-						// lines
-						if c_r {
-							let mut line = line.clone().expect("c_r");
-							ret.lines.push( line );
-						}
-						if c_d {
-							let mut line = line.clone().expect("c_d");
-							line.rotate(90.0);
-							ret.lines.push( line );
-						}
-						line.scale2f((2.0 as f32).sqrt(),1.0);
-						if c_dr {
-							let mut line = line.clone().expect("c_d");
-							line.rotate(45.0);
-							ret.lines.push( line );
-						}
-						if c_dl {
-							let mut line = line.clone().expect("c_d");
-							line.rotate(135.0);
-							ret.lines.push( line );
-						}
 					}
 				}
 			}
@@ -233,38 +203,6 @@ impl GameplayScreen  {
 				_ => {}
 			}
 		}
-
-		println!("Starting A*...");
-		for i in range(0,ret.creatures.len()) {
-			break;
-			if ret.creatures.get(i).player { continue; }
-
-			let pos = ret.creatures.get(i).get_position();
-			let start_coords = ret.to_tile_coords((pos.x,pos.y));
-			let end_coords = (start_x,start_y);
-
-			let path = AStarSearch::new_diagonal().solve(&ret.graph, start_coords, end_coords).
-					expect("Couldn't solve");
-
-
-			for coords in path.iter() {
-				let (tx,ty) = coords.clone();
-				let wx = tx as f32 * t_sz as f32; 
-				let wy = ty as f32 * t_sz as f32;
-				let radius = 6.0;
-				let mut circle = CircleShape::new_init(radius,8).expect("fahsdkfhaslkdfh");
-				circle.set_origin2f(radius,radius);
-				circle.set_position2f(wx,wy);
-				circle.set_fill_color( &Color::new_RGBA(255,0,0,150) );
-				ret.circles.push(circle);
-			}
-
-			ret.creatures.get_mut(i).set_path(&path);
-			// hero.set_position( &ret.creatures.get(i).get_position() );
-
-			// break;
-		}
-		println!("DONE!");
 
 		ret.creatures.push(hero);
 		ret
@@ -351,7 +289,7 @@ impl GameplayScreen  {
 				// get solutions
 				let mut path_map: HashMap<uint,Vec<(int,int)>> = HashMap::new();
 				for solver in self.solvers.mut_iter() {
-					println!("{}...",solver.get_problem_count());
+					//println!("{}...",solver.get_problem_count());
 					loop {
 						match solver.poll() {
 							None => break,
@@ -365,7 +303,7 @@ impl GameplayScreen  {
 							}
 						}
 					}
-					println!("...{} ({})",solver.get_problem_count(),path_map.len());
+					//println!("...{} ({})",solver.get_problem_count(),path_map.len());
 				}
 
 				// chase player!
@@ -388,7 +326,7 @@ impl GameplayScreen  {
 									self.creatures.get_mut(i).awake = true;
 									let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
 									let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
-									println!("Queueing solve...");
+									println!("Queueing solve {}...",id);
 									let solver_idx = i % self.solvers.len();
 									self.solvers.get_mut(solver_idx).queue_solve(
 										id,
@@ -396,7 +334,7 @@ impl GameplayScreen  {
 										rawr_coords,
 										hero_coords
 									);
-									println!("Queued!");
+									println!("Queued {}!",id);
 								},
 								// if the creature has a path id
 								Some(ref id) => {
@@ -442,21 +380,21 @@ impl GameplayScreen  {
 
 
 				// // uncommenting this bit will paint "nearby" tiles
-				let hero_box = self.creatures.get(hero).get_bounds();
-				let active = self.get_active_tiles( &hero_box );
+				// let hero_box = self.creatures.get(hero).get_bounds();
+				// let active = self.get_active_tiles( &hero_box );
 
-				for data in self.tiles.mut_iter() {
-					for sprite in data.sprites.mut_iter() {
-						sprite.set_color(&Color::white());
-					}
-				}
+				// for data in self.tiles.mut_iter() {
+				// 	for sprite in data.sprites.mut_iter() {
+				// 		sprite.set_color(&Color::white());
+				// 	}
+				// }
 
-				for coords in active.iter() {
-					let idx = self.to_tile_idx(coords.clone()).expect("Aw snap");
-					for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
-						sprite.set_color(&Color::green());
-					}
-				}
+				// for coords in active.iter() {
+				// 	let idx = self.to_tile_idx(coords.clone()).expect("Aw snap");
+				// 	for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
+				// 		sprite.set_color(&Color::green());
+				// 	}
+				// }
 			}
 		}
 
@@ -555,7 +493,11 @@ impl GameplayScreen  {
 
 		if x_idx < 0 || y_idx < 0 { return None; }
 
-		Some( (x_idx+y_idx*(self.dungeon.width)) as uint)
+		let idx = (x_idx+y_idx*(self.dungeon.width)) as uint;
+
+		if idx >= self.tiles.len() { return None; }
+
+		Some( idx )
 	}
 
 	fn draw(&self, game : &mut Game, window : &mut RenderWindow) {
@@ -576,34 +518,105 @@ impl GameplayScreen  {
 			}
 		}
 
-		for data in self.tiles.iter() {
-			for sprite in data.sprites.iter() {
-				match hero_tile_coords {
-					None => window.draw(sprite),
-					Some(coords) => {
-						let (x,y) = coords;
-						if self.debug || data.seen || self.los_coords(x,y,data.tile.x,data.tile.y) {
-							window.draw(sprite);
+		let radius = self.tile_size as f32 / 4.0;
+
+		let view_size = self.view.get_size();
+		let view_center = self.view.get_center();
+		let view_half = view_size / 2.0f32;
+
+		let view_left = view_center.x - view_half.x;
+		let view_right = view_center.x + view_half.x;
+		let view_top = view_center.y - view_half.y;
+		let view_bottom = view_center.y + view_half.y;
+
+		let coord_left = self.to_coord_idx(view_left);
+		let coord_right = self.to_coord_idx(view_right);
+		let coord_top = self.to_coord_idx(view_top);
+		let coord_bottom = self.to_coord_idx(view_bottom);
+
+		for y in range (coord_top,coord_bottom+1) {
+			for x in range (coord_left,coord_right+1) {
+				match self.to_tile_idx((x,y)) {
+
+					None => {}
+
+					Some(idx) => {
+						let data = self.tiles.get(idx);
+						// first draw sprites
+						for sprite in data.sprites.iter() {
+							match hero_tile_coords {
+								None => window.draw(sprite),
+								Some(coords) => {
+									let (x,y) = coords;
+									if self.debug || data.seen || self.los_coords(x,y,data.tile.x,data.tile.y) {
+										window.draw(sprite);
+									}
+								}
+							}
+						}
+						// then maybe nodes
+						if data.is_passable() && self.debug {
+							let mut circle = self.debug_node_circle.clone().expect("Couldn't clone debug circle");
+							circle.set_position2f(
+								data.tile.x as f32 * self.tile_size as f32,
+								data.tile.y as f32 * self.tile_size as f32
+							);
+							window.draw(&circle);
 						}
 					}
+
 				}
 			}
 		}
-		if self.debug {
-			for line in self.lines.iter() {
-				window.draw(line);
-			}
 
-			for circle in self.circles.iter() {
-				window.draw(circle);
-			}
-		}
+
 		for creature in self.creatures.iter() {
 			match hero_pos {
 				None => creature.draw(window),
 				Some(ref pos) => {
 					if self.debug || self.los(pos,&creature.get_position()) {
 						creature.draw(window);
+						if self.debug {
+							match creature.get_path() {
+								None => {}
+								Some(path) => {
+									// draw_line(&mut self, window: &mut RenderWindow,
+									// start: &Vector2f, end: &Vector2f, color: &Color)
+
+									// draw red line from creature to current target node
+									let (start_tx,start_ty) = *path.get(0);
+									let start_wx = start_tx as f32 * self.tile_sizef;
+									let start_wy = start_ty as f32 * self.tile_sizef;
+									let cpos = creature.get_position();
+									let npos = Vector2f::new(start_wx,start_wy);
+									game.draw_line(
+										window,
+										&cpos,
+										&npos,
+										&Color::red()
+									);
+
+									// if path len > 1, connect all nodes
+									if path.len() > 1 {
+										for i in range(0,path.len()-1) {
+											let (atx,aty) = *path.get(i);
+											let (btx,bty) = *path.get(i+1);
+											let t = self.tile_sizef;
+											let (awx,awy) = (atx as f32*t,aty as f32*t);
+											let (bwx,bwy) = (btx as f32*t,bty as f32*t);
+											let apos = Vector2f::new(awx,awy);
+											let bpos = Vector2f::new(bwx,bwy);
+											game.draw_line(
+												window,
+												&apos,
+												&bpos,
+												&Color::new_RGBA( 255,255,255,150 )
+											);
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -747,34 +760,38 @@ impl TileData {
 ///////////////// utility stuff
 // TODO oh god this is so messy
 
-// closure for non-diagonal connections
-fn connect_direct (ret: &mut GameplayScreen, x: int, y: int, offset: (int,int)) -> bool {
-	let (ox,oy) = offset;
-	let x2 = x+ox;
-	let y2 = y+oy;
-	let idx2_opt = ret.to_tile_idx( (x2, y2) );
-	match idx2_opt {
-		None => false,
-		Some(idx2) => match ret.tiles.get(idx2).is_passable() {
-			false => false,
-			true => ret.graph.connect_nodes_at(x,y,x2,y2)
+impl GameplayScreen {
+
+	// closure for non-diagonal connections
+	fn connect_direct (&mut self, x: int, y: int, offset: (int,int)) -> bool {
+		let (ox,oy) = offset;
+		let x2 = x+ox;
+		let y2 = y+oy;
+		let idx2_opt = self.to_tile_idx( (x2, y2) );
+		match idx2_opt {
+			None => false,
+			Some(idx2) => match self.tiles.get(idx2).is_passable() {
+				false => false,
+				true => self.graph.connect_nodes_at(x,y,x2,y2)
+			}
 		}
 	}
-}
 
-// closure for diagonal connections
-fn connect_diag (ret: &mut GameplayScreen, x: int, y: int, offset: (int,int),
-		check1: (int,int), check2: (int,int)) -> bool {
-	let check1_idx_opt = ret.to_tile_idx(check1);
-	let check2_idx_opt = ret.to_tile_idx(check2);
-	match (check1_idx_opt,check2_idx_opt) {
-		(Some(check1_idx),Some(check2_idx)) => match (
-			ret.tiles.get(check1_idx).is_passable(),
-			ret.tiles.get(check2_idx).is_passable()
-		) {
-			(true,true) => connect_direct(ret,x,y,offset),
+	// closure for diagonal connections
+	fn connect_diag (&mut self, x: int, y: int, offset: (int,int),
+			check1: (int,int), check2: (int,int)) -> bool {
+		let check1_idx_opt = self.to_tile_idx(check1);
+		let check2_idx_opt = self.to_tile_idx(check2);
+		match (check1_idx_opt,check2_idx_opt) {
+			(Some(check1_idx),Some(check2_idx)) => match (
+				self.tiles.get(check1_idx).is_passable(),
+				self.tiles.get(check2_idx).is_passable()
+			) {
+				(true,true) => self.connect_direct(x,y,offset),
+				(_,_) => false
+			},
 			(_,_) => false
-		},
-		(_,_) => false
+		}
 	}
+
 }

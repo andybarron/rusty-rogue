@@ -40,7 +40,7 @@ impl Solver {
 					Some(problem) => {
 						let id = problem.id;
 						let path = search.solve(&problem.graph,problem.start,problem.end);
-						println!("Solver thread did its job!");
+						println!("Solver thread finished job {}!",id);
 						soln_send.send( Solution { id: id, path: path } );
 					}
 				}
@@ -60,7 +60,9 @@ impl Solver {
 			start: start,
 			end: end,
 		};
+		println!("About to send {}...",id);
 		self.prob_send.send(p);
+		println!("Sent {}!",id);
 		self.count += 1;
 	}
 	pub fn poll(&mut self) -> Option<Solution> {
