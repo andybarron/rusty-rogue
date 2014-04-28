@@ -1,6 +1,7 @@
 // TODO custom tile culling so we don't draw the entire level every frame
 
 use std::mem::swap;
+use collections::hashmap::HashMap;
 
 use rsfml::graphics::RenderWindow;
 use rsfml::graphics::View;
@@ -28,6 +29,9 @@ use entities::Creature;
 
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
+use solver::{Solver,Solution};
+
+static SOLVER_THREAD_COUNT : uint = 8;
 
 pub struct GameplayScreen {
 	tile_size: uint,
@@ -41,6 +45,8 @@ pub struct GameplayScreen {
 	zoom_levels: ~[f32],
 	creatures: Vec<Creature>,
 	debug: bool,
+	solvers: Vec<Solver>,
+	path_count: uint,
 }
 
 impl GameplayScreen  {
@@ -66,8 +72,14 @@ impl GameplayScreen  {
 			tiles: Vec::new(),
 			view: View::new().expect("Failed to create View"),
 			creatures: Vec::new(),
-			debug: false
+			debug: false,
+			solvers: Vec::new(),
+			path_count: 0,
 		};
+
+		for _ in range (0,SOLVER_THREAD_COUNT) {
+			ret.solvers.push(Solver::new());
+		}
 
 		// closure to get tile coordinates from tile x/y index
 		// i.e. top left tile in texture atlas is (0,0)
@@ -336,6 +348,25 @@ impl GameplayScreen  {
 					None => { }
 					Some(deg) => { self.creatures.get_mut(hero).move_polar_deg(dist,deg); }
 				}
+				// get solutions
+				let mut path_map: HashMap<uint,Vec<(int,int)>> = HashMap::new();
+				for solver in self.solvers.mut_iter() {
+					println!("{}...",solver.get_problem_count());
+					loop {
+						match solver.poll() {
+							None => break,
+							Some(soln) => {
+								let id = soln.id;
+								let path = match soln.path {
+									None => Vec::new(),
+									Some(path) => path
+								};
+								path_map.insert(id,path);
+							}
+						}
+					}
+					println!("...{} ({})",solver.get_problem_count(),path_map.len());
+				}
 
 				// chase player!
 				let hero_pos = self.creatures.get(hero).get_position();
@@ -348,14 +379,43 @@ impl GameplayScreen  {
 					let has_path = self.creatures.get(i).has_path();
 					match has_path {
 						false => {
-							if self.los(&hero_pos,&monster_pos) {
-								let pos_dif = hero_pos - monster_pos;
-								let (dx,dy) = (pos_dif.x,pos_dif.y);
-
-								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+							let path_id = self.creatures.get(i).path_id;
+							match path_id {
+								None => if self.creatures.get(i).awake || self.los(&hero_pos,&monster_pos) {
+									let id = self.path_count;
+									self.path_count += 1;
+									self.creatures.get_mut(i).path_id = Some(id);
+									self.creatures.get_mut(i).awake = true;
+									let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
+									let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
+									println!("Queueing solve...");
+									let solver_idx = i % self.solvers.len();
+									self.solvers.get_mut(solver_idx).queue_solve(
+										id,
+										&self.graph,
+										rawr_coords,
+										hero_coords
+									);
+									println!("Queued!");
+								},
+								// if the creature has a path id
+								Some(ref id) => {
+									let path_opt = path_map.pop(id);
+									match path_opt {
+										None => {},
+										Some(ref path) => {
+											self.creatures.get_mut(i).path_id = None;
+											match path.len() {
+												0 => {},
+												_ => self.creatures.get_mut(i).set_path(path)
+											}
+										}
+									}
+								}
 							}
 						}
 						true => {
+							// TODO if/while chase dist > remaining length, move forward towards next tile
 							let tsz = self.tile_size as f32;
 							let first_coords = self.creatures.get(i).get_target_node().expect("UGH");
 							let (tx,ty) = first_coords;
@@ -472,6 +532,11 @@ impl GameplayScreen  {
 		}
 
 		active_tiles
+	}
+
+	fn get_creature_tile_coords(&self, creature: &Creature) -> (int,int) {
+		let pos = creature.get_position();
+		self.to_tile_coords((pos.x,pos.y))
 	}
 
 	fn to_tile_coords(&self, pos: (f32, f32) ) -> (int,int) {

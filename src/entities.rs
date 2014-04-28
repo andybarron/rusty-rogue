@@ -9,7 +9,9 @@ pub struct Creature {
 	pos: Vector2f,
 	sprite: Sprite, // TODO some kind of Animation class
 	pub player: bool,
-	path: Vec<(int,int)>
+	path: Vec<(int,int)>,
+	pub path_id: Option<uint>,
+	pub awake: bool,
 }
 
 impl Creature {
@@ -23,6 +25,8 @@ impl Creature {
 			sprite: sprite,
 			player: false,
 			path: Vec::new(),
+			path_id: None,
+			awake: false,
 		};
 
 		// TODO better sprite origin calculation?
@@ -126,7 +130,9 @@ impl Clone for Creature {
 			pos: self.pos,
 			sprite: self.sprite.clone().expect("Creature.clone() failed to clone sprite"),
 			player: self.player,
-			path: self.path.clone()
+			path: self.path.clone(),
+			path_id: self.path_id.clone(),
+			awake: self.awake,
 		}
 	}
 }
