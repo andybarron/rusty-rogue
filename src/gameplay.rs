@@ -26,6 +26,7 @@ use util;
 use collision::CollisionResolver;
 
 use entities::Creature;
+use animation::Animation;
 
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
@@ -174,14 +175,36 @@ impl GameplayScreen  {
 		}
 		println!("Done with graph!");
 
+		let get_spr = |x: uint, y: uint| -> Sprite {
+			let coords = grab_tile_rect(x,y);
+			let mut spr = Sprite::new_with_texture(rc_tex.clone()).expect("erp");
+			spr.set_texture_rect(&coords);
+			spr
+		};
+
+		let get_walk_cycle = |x: uint, y: uint, length: f32| -> Animation {
+			let spr_m = get_spr(x,y);
+			let spr_l = get_spr(x-1,y);
+			let spr_r = get_spr(x+1,y);
+			let mut anim = Animation::new(length);
+			anim.add_sprite(&spr_m);
+			anim.add_sprite(&spr_l);
+			anim.add_sprite(&spr_m);
+			anim.add_sprite(&spr_r);
+			anim
+		};
+
 
 		// load up player sprite
 		let coords_hero = grab_tile_rect(4,8);
 		let mut sprite_hero = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to create hero sprite");
 		sprite_hero.set_texture_rect(&coords_hero);
 
+		let mut anim_hero = Animation::new(1.0);
+		anim_hero.add_sprite(&sprite_hero);
+
 		// create player creature
-		let mut hero = Creature::new(sprite_hero,10);
+		let mut hero = Creature::new(&get_walk_cycle(4,8,0.125),10);
 		let (start_x, start_y) = dungeon.start_coords;
 		hero.set_position2f( (start_x*t_sz as int) as f32, (start_y*t_sz as int) as f32 );
 		hero.player = true;
@@ -193,12 +216,14 @@ impl GameplayScreen  {
 		let coords_slime = grab_tile_rect(10,8);
 		let mut sprite_slime = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to load slime sprite");
 		sprite_slime.set_texture_rect(&coords_slime);
+		let mut anim_slime = Animation::new(1.0);
+		anim_slime.add_sprite(&sprite_slime);
 
 		// find and create monsters
 		for tile in dungeon.tiles.iter() {
 			match tile.e {
 				Some(Monster) => {
-					let mut slime = Creature::new(sprite_slime.clone().expect("Couldn't clone slime sprite"),5);
+					let mut slime = Creature::new(&get_walk_cycle(10,8,0.5),5);
 					slime.set_position2f( (tile.x*t_sz as int) as f32, (tile.y*t_sz as int) as f32 );
 					ret.creatures.push(slime);
 				}
@@ -442,6 +467,11 @@ impl GameplayScreen  {
 					}
 				}
 			}
+		}
+
+		// updates
+		for creature in self.creatures.mut_iter() {
+			creature.update_anim(delta);
 		}
 
 		// set up screen view
