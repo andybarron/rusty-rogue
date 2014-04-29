@@ -10,6 +10,7 @@ pub struct Creature {
 	sprite: Sprite, // TODO some kind of Animation class
 	pub player: bool,
 	path: Vec<(int,int)>,
+	pub path_age: f32,
 	pub path_id: Option<uint>,
 	pub awake: bool,
 }
@@ -25,6 +26,7 @@ impl Creature {
 			sprite: sprite,
 			player: false,
 			path: Vec::new(),
+			path_age: 0.0,
 			path_id: None,
 			awake: false,
 		};
@@ -111,6 +113,7 @@ impl Creature {
 	pub fn set_path(&mut self, path: &Vec<(int,int)>) {
 		self.path.clear();
 		self.path = path.clone();
+		self.path_age = 0.0;
 	}
 
 	pub fn get_target_node(&self) -> Option<(int,int)> {
@@ -138,6 +141,7 @@ impl Clone for Creature {
 			sprite: self.sprite.clone().expect("Creature.clone() failed to clone sprite"),
 			player: self.player,
 			path: self.path.clone(),
+			path_age: self.path_age,
 			path_id: self.path_id.clone(),
 			awake: self.awake,
 		}

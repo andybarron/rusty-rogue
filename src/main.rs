@@ -17,6 +17,7 @@ mod search;
 mod solver;
 mod engine;
 mod collision;
+mod animation;
 mod entities;
 mod gameplay;
 

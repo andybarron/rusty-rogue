@@ -31,7 +31,7 @@ use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
 use solver::{Solver,Solution};
 
-static SOLVER_THREAD_COUNT : uint = 4;
+static SOLVER_THREAD_COUNT : uint = 1;
 
 pub struct GameplayScreen {
 	tile_size: uint,
@@ -301,6 +301,7 @@ impl GameplayScreen  {
 									None => Vec::new(),
 									Some(path) => path
 								};
+								println!("Got path {} from solver",id);
 								path_map.insert(id,path);
 							}
 						}
@@ -316,46 +317,46 @@ impl GameplayScreen  {
 
 					let monster_pos = self.creatures.get(i).get_position();
 
-					let has_path = self.creatures.get(i).has_path();
-					match has_path {
-						false => {
-							let path_id = self.creatures.get(i).path_id;
-							match path_id {
-								None => if self.creatures.get(i).awake || self.los(&hero_pos,&monster_pos) {
-									let id = self.path_count;
-									self.path_count += 1;
-									self.creatures.get_mut(i).path_id = Some(id);
-									self.creatures.get_mut(i).awake = true;
-									let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
-									let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
-									println!("Queueing solve {}...",id);
-									let solver_idx = i % self.solvers.len();
-									self.solvers.get_mut(solver_idx).queue_solve(
-										id,
-										self.graph.clone(),
-										rawr_coords,
-										hero_coords
-									);
-									println!("Queued {}!",id);
-								},
-								// if the creature has a path id
-								Some(ref id) => {
-									let path_opt = path_map.pop(id);
-									match path_opt {
-										None => {},
-										Some(ref path) => {
-											self.creatures.get_mut(i).path_id = None;
-											match path.len() {
-												0 => {},
-												_ => self.creatures.get_mut(i).set_path(path)
-											}
-										}
-									}
+					let sees_player = self.los(&hero_pos,&monster_pos);
+
+					let path_id = self.creatures.get(i).path_id;
+
+					let searching_path = self.creatures.get(i).path_id.is_some();
+
+					match path_id {
+						None => {}
+						Some(ref id) => {
+							let path_opt = path_map.pop(id);
+							match path_opt {
+								None => {},
+								Some(ref path) => {
+									self.creatures.get_mut(i).path_id = None;
+									//match path.len() {
+										//0 => {},
+										//_ => {
+											println!("Applying path {} ~~~",id);
+											self.creatures.get_mut(i).set_path(path);
+											self.creatures.get_mut(i).pop_path_node();
+										//}
+									//}
 								}
 							}
 						}
+					}
+					let has_path = self.creatures.get(i).has_path();
+
+					let req_path = sees_player &&
+						( (!has_path) || (!searching_path && self.creatures.get(i).path_age > 0.1) );
+
+					if req_path {
+						self.request_path_update(i,hero);
+					}
+
+					
+					match has_path {
+						false => {} // already taken care of
 						true => {
-							// TODO if/while chase dist > remaining length, move forward towards next tile
+							self.creatures.get_mut(i).path_age += delta;
 							let tsz = self.tile_size as f32;
 							let first_coords = self.creatures.get(i).get_target_node().expect("UGH");
 							let (tx,ty) = first_coords;
@@ -451,6 +452,24 @@ impl GameplayScreen  {
 			None => {},
 			Some(hero) => self.view.set_center( &self.creatures.get(hero).get_position() )
 		}
+	}
+
+	fn request_path_update(&mut self, i: uint, hero: uint) {
+		let id = self.path_count;
+		self.path_count += 1;
+		self.creatures.get_mut(i).path_id = Some(id);
+		self.creatures.get_mut(i).awake = true;
+		let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
+		let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
+		println!("Queueing solve {}...",id);
+		let solver_idx = i % self.solvers.len();
+		self.solvers.get_mut(solver_idx).queue_solve(
+			id,
+			self.graph.clone(),
+			rawr_coords,
+			hero_coords
+		);
+		println!("Queued {}!",id);
 	}
 
 	fn get_active_tiles(&self, bounds: &FloatRect) -> Vec<(int,int)> {
