@@ -1,4 +1,5 @@
 use std::mem::swap;
+use std::iter::Range;
 use collections::hashmap::HashMap;
 
 use sync::{Arc,RWLock};
@@ -48,6 +49,8 @@ pub struct GameplayScreen {
 	debug_node_circle: CircleShape,
 	solvers: Vec<Solver>,
 	path_count: uint,
+	vis_x: Range<int>,
+	vis_y: Range<int>,
 }
 
 impl GameplayScreen  {
@@ -79,6 +82,8 @@ impl GameplayScreen  {
 			debug_node_circle: CircleShape::new_init(debug_node_radius, 8).expect("Failed to make debug node circle"),
 			solvers: Vec::new(),
 			path_count: 0,
+			vis_x: range(0,1),
+			vis_y: range(0,1),
 		};
 		ret.debug_node_circle.set_origin2f(debug_node_radius,debug_node_radius);
 		ret.debug_node_circle.set_fill_color( &Color::new_RGBA(0,0,255,150) );
@@ -141,7 +146,6 @@ impl GameplayScreen  {
 				ret.graph.write().add_node_at(x,y);
 			}
 		}
-
 
 		println!("Starting graph node loop...");
 		// loop through the graph and
@@ -492,6 +496,68 @@ impl GameplayScreen  {
 			None => {},
 			Some(hero) => self.view.set_center( &self.creatures.get(hero).get_position() )
 		}
+
+		// figure out visible tiles
+
+		let radius = self.tile_size as f32 / 4.0;
+
+		let view_size = self.view.get_size();
+		let view_center = self.view.get_center();
+		let view_half = view_size / 2.0f32;
+
+		let view_left = view_center.x - view_half.x;
+		let view_right = view_center.x + view_half.x;
+		let view_top = view_center.y - view_half.y;
+		let view_bottom = view_center.y + view_half.y;
+
+		let coord_left = self.to_coord_idx(view_left);
+		let coord_right = self.to_coord_idx(view_right);
+		let coord_top = self.to_coord_idx(view_top);
+		let coord_bottom = self.to_coord_idx(view_bottom);
+
+		self.vis_x = range(coord_left,coord_right + 1);
+		self.vis_y = range(coord_top,coord_bottom + 1);
+
+		for y in self.vis_y.clone() {
+			for x in self.vis_x.clone() {
+				match self.to_tile_idx((x,y)) {
+					None => {},
+					Some(idx) => {
+						// set visibility based on player
+						match player {
+							None => {
+								let t = self.tiles.get_mut(idx);
+								t.seen = true;
+								t.visible = true;
+							}
+							Some(hero) => {
+								let hero_pos = self.creatures.get(hero).get_position();
+								let hero_coords = self.to_tile_coords((hero_pos.x,hero_pos.y));
+								let (hero_x,hero_y) = hero_coords;
+								let t = self.tiles.get(idx).tile;
+								
+								if self.los_coords(hero_x,hero_y,t.x,t.y) {
+									let data = self.tiles.get_mut(idx);
+									data.seen = true;
+									data.visible = true;
+								} else {
+									let data = self.tiles.get_mut(idx);
+									data.visible = false;
+								}
+							}
+						}
+						// color
+						let t = self.tiles.get_mut(idx);
+						let color = if t.visible || self.debug {
+							Color::white()
+						} else {
+							Color::new_RGB(100,75,75)
+						};
+						for spr in t.sprites.mut_iter() {spr.set_color(&color);}
+					}
+				}
+			}
+		}
 	}
 
 	fn request_path_update(&mut self, i: uint, hero: uint) {
@@ -552,7 +618,9 @@ impl GameplayScreen  {
 	fn to_tile_idx(&self, tile_coords: (int,int) ) -> Option<uint> {
 		let (x_idx,y_idx) = tile_coords;
 
-		if x_idx < 0 || y_idx < 0 { return None; }
+		if x_idx < 0 || y_idx < 0 || x_idx >= self.dungeon.width
+			|| y_idx >= self.dungeon.height
+		{ return None; }
 
 		let idx = (x_idx+y_idx*(self.dungeon.width)) as uint;
 
@@ -579,24 +647,8 @@ impl GameplayScreen  {
 			}
 		}
 
-		let radius = self.tile_size as f32 / 4.0;
-
-		let view_size = self.view.get_size();
-		let view_center = self.view.get_center();
-		let view_half = view_size / 2.0f32;
-
-		let view_left = view_center.x - view_half.x;
-		let view_right = view_center.x + view_half.x;
-		let view_top = view_center.y - view_half.y;
-		let view_bottom = view_center.y + view_half.y;
-
-		let coord_left = self.to_coord_idx(view_left);
-		let coord_right = self.to_coord_idx(view_right);
-		let coord_top = self.to_coord_idx(view_top);
-		let coord_bottom = self.to_coord_idx(view_bottom);
-
-		for y in range (coord_top,coord_bottom+1) {
-			for x in range (coord_left,coord_right+1) {
+		for y in self.vis_y.clone() {
+			for x in self.vis_x.clone() {
 				match self.to_tile_idx((x,y)) {
 
 					None => {}
@@ -604,15 +656,9 @@ impl GameplayScreen  {
 					Some(idx) => {
 						let data = self.tiles.get(idx);
 						// first draw sprites
-						for sprite in data.sprites.iter() {
-							match hero_tile_coords {
-								None => window.draw(sprite),
-								Some(coords) => {
-									let (x,y) = coords;
-									if self.debug || data.seen || self.los_coords(x,y,data.tile.x,data.tile.y) {
-										window.draw(sprite);
-									}
-								}
+						if data.visible || data.seen || self.debug {
+							for sprite in data.sprites.iter() {
+								window.draw(sprite);
 							}
 						}
 						// then maybe nodes
@@ -801,11 +847,13 @@ struct TileData {
 	pub bounds: FloatRect,
 	pub tile: Tile,
 	pub seen: bool,
+	pub visible: bool,
 }
 
 impl TileData {
 	pub fn new(bounds: &FloatRect, tile: &Tile) -> TileData {
-		TileData { sprites: Vec::new(), bounds: bounds.clone(), tile: tile.clone(), seen: false }
+		TileData { sprites: Vec::new(), bounds: bounds.clone(),
+			tile: tile.clone(), seen: false, visible: false }
 	}
 	pub fn is_passable(&self) -> bool {
 		match self.sprites.len() {
