@@ -31,7 +31,7 @@ use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
 use solver::{Solver,Solution};
 
-static SOLVER_THREAD_COUNT : uint = 1;
+static SOLVER_THREAD_COUNT : uint = 4;
 
 pub struct GameplayScreen {
 	tile_size: uint,
