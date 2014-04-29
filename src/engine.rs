@@ -1,5 +1,5 @@
 use rsfml::graphics::{RenderWindow};
-use rsfml::window::{VideoMode, ContextSettings, Close, event, keyboard};
+use rsfml::window::{VideoMode, ContextSettings, Close, Resize, event, keyboard};
 use rsfml::window::keyboard::Key;
 use rsfml::window::event::Event;
 use rsfml::system::{Clock, Time, sleep, Vector2f};
@@ -13,12 +13,15 @@ use rsfml::audio;
 
 use util::get_rc_resource;
 
+use std::cast;
+
 pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 
 	// init window
 	let setting: ContextSettings = ContextSettings::default();
 	let mut window: RenderWindow = RenderWindow::new(VideoMode::new_init(w, h, 32),
-			title, Close, &setting).expect("Cannot create a new Render Window.");
+			title, unsafe { cast::transmute(Close as u32 | Resize as u32) },
+			&setting).expect("Cannot create a new Render Window.");
 	window.set_vertical_sync_enabled(true);
 	window.set_key_repeat_enabled(false);
 
