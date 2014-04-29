@@ -14,7 +14,7 @@ pub struct Tile {
 
 #[deriving(Clone)]
 pub enum Entity {
-	Monster,
+	Monster(uint),
 	Treasure,
 	Key,
 	Missingno
@@ -103,7 +103,7 @@ impl Dungeon {
 					None => '?',
 					Some(tile) => match tile.e {
 						Some(ent) => match ent {
-							Monster => 'M',
+							Monster(_) => 'M',
 							Treasure => 'T',
 							Key => 'K',
 							_ => '?'
@@ -444,7 +444,7 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 			match tile.e {
 				Some(_) => continue,
 				None => {
-					tile.e = Some(Monster);
+					tile.e = Some(Monster(rng.gen()));
 					placed_monsters += 1;
 				}
 			}

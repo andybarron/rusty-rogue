@@ -219,11 +219,21 @@ impl GameplayScreen  {
 		let mut anim_slime = Animation::new(1.0);
 		anim_slime.add_sprite(&sprite_slime);
 
+		let monster_cycles = [
+			get_walk_cycle(10,8,0.5),
+			get_walk_cycle(10,12,0.5),
+			get_walk_cycle(7,12,0.5),
+			get_walk_cycle(4,12,0.5),
+			get_walk_cycle(1,12,0.5),
+
+		];
+
 		// find and create monsters
 		for tile in dungeon.tiles.iter() {
 			match tile.e {
-				Some(Monster) => {
-					let mut slime = Creature::new(&get_walk_cycle(10,8,0.5),5);
+				Some(Monster(num)) => {
+					let idx = num % monster_cycles.len();
+					let mut slime = Creature::new(&monster_cycles[idx],5);
 					slime.set_position2f( (tile.x*t_sz as int) as f32, (tile.y*t_sz as int) as f32 );
 					ret.creatures.push(slime);
 				}
