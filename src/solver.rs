@@ -39,9 +39,9 @@ impl Solver {
 					}
 					Some(problem) => {
 						let id = problem.id;
-						let path = search.solve(&problem.graph,problem.start,problem.end);
+						//let path = search.solve(&problem.graph,problem.start,problem.end);
 						println!("Solver thread finished job {}!",id);
-						soln_send.send( Solution { id: id, path: path } );
+						//soln_send.send( Solution { id: id, path: path } );
 					}
 				}
 			}
