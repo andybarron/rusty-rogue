@@ -1,6 +1,8 @@
 use std::mem::swap;
 use collections::hashmap::HashMap;
 
+use sync::{Arc,RWLock};
+
 use rsfml::graphics::RenderWindow;
 use rsfml::graphics::View;
 use rsfml::graphics::Texture;
@@ -29,13 +31,13 @@ use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
 use solver::{Solver,Solution};
 
-static SOLVER_THREAD_COUNT : uint = 8;
+static SOLVER_THREAD_COUNT : uint = 4;
 
 pub struct GameplayScreen {
 	tile_size: uint,
 	tile_sizef: f32,
 	dungeon: Dungeon,
-	graph: Graph,
+	graph: Arc<RWLock<Graph>>,
 	tiles: Vec<TileData>,
 	view: View,
 	zoom_index: int,
@@ -66,7 +68,7 @@ impl GameplayScreen  {
 			tile_size: tsz_init,
 			tile_sizef: tsz_init as f32,
 			dungeon: dungeon.clone(),
-			graph: Graph::new(),
+			graph: Arc::new( RWLock::new( Graph::new() ) ),
 			zoom_index: 1,
 			zoom_levels: ~[1.,2.,3.,4.],
 			tiles: Vec::new(),
@@ -135,7 +137,7 @@ impl GameplayScreen  {
 		// initialize graph
 		for y in range(0,dungeon.height) {
 			for x in range(0,dungeon.width) {
-				ret.graph.add_node_at(x,y);
+				ret.graph.write().add_node_at(x,y);
 			}
 		}
 
@@ -330,7 +332,7 @@ impl GameplayScreen  {
 									let solver_idx = i % self.solvers.len();
 									self.solvers.get_mut(solver_idx).queue_solve(
 										id,
-										&self.graph,
+										self.graph.clone(),
 										rawr_coords,
 										hero_coords
 									);
@@ -772,7 +774,7 @@ impl GameplayScreen {
 			None => false,
 			Some(idx2) => match self.tiles.get(idx2).is_passable() {
 				false => false,
-				true => self.graph.connect_nodes_at(x,y,x2,y2)
+				true => self.graph.write().connect_nodes_at(x,y,x2,y2)
 			}
 		}
 	}

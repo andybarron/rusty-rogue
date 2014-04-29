@@ -2,6 +2,7 @@ extern crate rsfml;
 extern crate rand;
 extern crate collections;
 extern crate native;
+extern crate sync;
 
 use rand::{XorShiftRng,SeedableRng};
 

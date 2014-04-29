@@ -3,10 +3,11 @@ use std::comm::{Empty,Disconnected,Data};
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
 use std::rt::thread::Thread;
+use sync::{Arc,RWLock};
 
 struct Problem {
 	id: uint,
-	graph: Graph,
+	graph: Arc<RWLock<Graph>>,
 	start: (int,int),
 	end: (int,int),
 }
@@ -39,9 +40,9 @@ impl Solver {
 					}
 					Some(problem) => {
 						let id = problem.id;
-						//let path = search.solve(&problem.graph,problem.start,problem.end);
+						let path = search.solve(&*problem.graph.read(),problem.start,problem.end);
 						println!("Solver thread finished job {}!",id);
-						//soln_send.send( Solution { id: id, path: path } );
+						soln_send.send( Solution { id: id, path: path } );
 					}
 				}
 			}
@@ -53,10 +54,10 @@ impl Solver {
 			count: 0,
 		}
 	}
-	pub fn queue_solve(&mut self, id: uint, graph: &Graph, start: (int,int), end: (int,int)) {
+	pub fn queue_solve(&mut self, id: uint, graph: Arc<RWLock<Graph>>, start: (int,int), end: (int,int)) {
 		let p = Problem{
 			id: id,
-			graph: graph.clone(),
+			graph: graph,
 			start: start,
 			end: end,
 		};
