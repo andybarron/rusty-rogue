@@ -35,13 +35,11 @@ impl Solver {
 			loop {
 				match prob_recv.recv_opt() {
 					None => {
-						println!("Solver thread disconnected!");
 						break;
 					}
 					Some(problem) => {
 						let id = problem.id;
 						let path = search.solve(&*problem.graph.read(),problem.start,problem.end);
-						println!("Solver thread finished job {}!",id);
 						soln_send.send( Solution { id: id, path: path } );
 					}
 				}
@@ -61,9 +59,7 @@ impl Solver {
 			start: start,
 			end: end,
 		};
-		println!("About to send {}...",id);
 		self.prob_send.send(p);
-		println!("Sent {}!",id);
 		self.count += 1;
 	}
 	pub fn poll(&mut self) -> Option<Solution> {

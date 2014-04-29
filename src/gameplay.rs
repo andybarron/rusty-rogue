@@ -213,8 +213,7 @@ impl GameplayScreen  {
 		hero.set_position2f( (start_x*t_sz as int) as f32, (start_y*t_sz as int) as f32 );
 		hero.player = true;
 
-		// println!{"{},{}",start_x,start_y};
-		// println!("{}",ret.graph.get_neighbors_at( start_x, start_y ));
+
 
 		// a bunch of monsters
 		let coords_slime = grab_tile_rect(10,8);
@@ -228,8 +227,7 @@ impl GameplayScreen  {
 			get_walk_cycle(10,12,0.5),
 			get_walk_cycle(7,12,0.5),
 			get_walk_cycle(4,12,0.5),
-			get_walk_cycle(1,12,0.5),
-
+			// get_walk_cycle(1,12,0.5), // slime
 		];
 
 		// find and create monsters
@@ -330,7 +328,6 @@ impl GameplayScreen  {
 				// get solutions
 				let mut path_map: HashMap<uint,Vec<(int,int)>> = HashMap::new();
 				for solver in self.solvers.mut_iter() {
-					//println!("{}...",solver.get_problem_count());
 					loop {
 						match solver.poll() {
 							None => break,
@@ -340,12 +337,10 @@ impl GameplayScreen  {
 									None => Vec::new(),
 									Some(path) => path
 								};
-								println!("Got path {} from solver",id);
 								path_map.insert(id,path);
 							}
 						}
 					}
-					//println!("...{} ({})",solver.get_problem_count(),path_map.len());
 				}
 
 				// chase player!
@@ -373,7 +368,6 @@ impl GameplayScreen  {
 									//match path.len() {
 										//0 => {},
 										//_ => {
-											println!("Applying path {} ~~~",id);
 											self.creatures.get_mut(i).set_path(path);
 											self.creatures.get_mut(i).pop_path_node();
 										//}
@@ -567,7 +561,6 @@ impl GameplayScreen  {
 		self.creatures.get_mut(i).awake = true;
 		let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
 		let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
-		println!("Queueing solve {}...",id);
 		let solver_idx = i % self.solvers.len();
 		self.solvers.get_mut(solver_idx).queue_solve(
 			id,
@@ -575,7 +568,6 @@ impl GameplayScreen  {
 			rawr_coords,
 			hero_coords
 		);
-		println!("Queued {}!",id);
 	}
 
 	fn get_active_tiles(&self, bounds: &FloatRect) -> Vec<(int,int)> {
@@ -824,7 +816,6 @@ impl GameplayScreen  {
 impl Screen for GameplayScreen {
 
 	fn key_press(&mut self, game : &mut Game, window : &mut RenderWindow, key : Key) -> bool {
-		// println!("pressed [{}]",key);
 		match key {
 			keyboard::Comma => {self.zoom_index -= 1;true}
 			keyboard::Period => {self.zoom_index += 1;true}
