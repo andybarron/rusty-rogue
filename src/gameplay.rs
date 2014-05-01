@@ -57,6 +57,8 @@ impl GameplayScreen  {
 
 	pub fn new(dungeon: &Dungeon) -> GameplayScreen {
 
+		let mut dungeon = dungeon.clone();
+		dungeon.shrink();
 		// load tile texture file
 		let tex_path = get_gfx_path("all_tiles.png");
 		let tex = Texture::new_from_file( tex_path ).expect("Failed to load all_tiles.png");
@@ -158,10 +160,6 @@ impl GameplayScreen  {
 					false => {}
 					true => {
 						let t_sz = t_sz as f32;
-						let mut line = RectangleShape::new().expect("Rectangle faaaailure");
-						line.set_size2f( t_sz, 1.0 );
-						line.set_origin2f( 0.0, 0.5 );
-						line.set_fill_color( &Color::new_RGBA(0,255,255,150) );
 						// only check R, DR, D, DL
 						// yay undirected graphs!
 
@@ -729,7 +727,7 @@ impl GameplayScreen  {
 	}
 
 	fn get_tile_los(&self, coords: (int,int) ) -> bool {
-		let idx = self.to_tile_idx( coords ).expect("FAILED getting tile LOS");
+		let idx = self.to_tile_idx( coords ).expect( format!("FAILED getting tile LOS {}",coords));
 		self.tiles.get(idx).is_clear()
 	}
 

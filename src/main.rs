@@ -25,5 +25,5 @@ mod gameplay;
 fn start(argc: int, argv: **u8) -> int { native::start(argc, argv, main) }
 
 fn main() {
-	launch(~GameplayScreen::new( &generate_default( 123 ) ),"Hello Dungeon",800,600);
+	launch(~GameplayScreen::new( &generate_default( 123 ) ),"Rusty Rogue",800,600);
 }

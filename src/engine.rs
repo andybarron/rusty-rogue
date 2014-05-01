@@ -29,6 +29,9 @@ pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 	let mut s = screen;
 	s.init(&mut game, &mut window);
 
+	// init sound idx remover
+	let mut removed: Vec<uint> = Vec::new();
+
 	// init timer
 	let mut t = Timer::new();
 
@@ -68,25 +71,19 @@ pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 		window.display();
 
 		// clean up sounds playing
-		let mut removed: Vec<uint> = Vec::new();
-		let mut len = game.sounds.len();
-		let mut i = 0;
-		while ( i < len ) {
-			let sound = &game.sounds.get(i);
-			match sound.get_status() {
+		for i in range ( 0 , game.sounds.len() ) {
+			match game.sounds.get(i).get_status() {
 				audio::Stopped => {
 					removed.push(i);
 				}
 				_ => {}
 			}
-			i += 1;
 		}
-
-		let mut num_removed = 0;
-		for r in removed.iter() {
-			game.sounds.remove(r - num_removed);
-			num_removed += 1;
+		
+		for r in removed.iter().rev() {
+			game.sounds.swap_remove(*r);
 		}
+		removed.clear();
 	}
 }
 
@@ -118,16 +115,28 @@ impl Game {
 		}
 	}
 
+	// pub fn draw_line(&mut self, window: &mut RenderWindow, start: &Vector2f, end: &Vector2f, color: &Color) {
+	// 	let mut a = Vertex::default();
+	// 	let mut b = Vertex::default();
+	// 	a.position = *start;
+	// 	b.position = *end;
+	// 	a.color = *color;
+	// 	b.color = *color;
+	// 	self.va.resize(2);
+	// 	*self.va.get_vertex(0) = a;
+	// 	*self.va.get_vertex(1) = b;
+	// 	self.va.set_primitive_type(Lines);
+	// 	window.draw(&self.va);
+	// }
+
 	pub fn draw_line(&mut self, window: &mut RenderWindow, start: &Vector2f, end: &Vector2f, color: &Color) {
-		let mut a = Vertex::default();
-		let mut b = Vertex::default();
+		self.va.resize(2);
+		let a = self.va.get_vertex(0);
+		let b = self.va.get_vertex(1);
 		a.position = *start;
 		b.position = *end;
 		a.color = *color;
 		b.color = *color;
-		self.va.resize(2);
-		*self.va.get_vertex(0) = a;
-		*self.va.get_vertex(1) = b;
 		self.va.set_primitive_type(Lines);
 		window.draw(&self.va);
 	}
@@ -140,8 +149,8 @@ impl Game {
 		self.sounds.push(sound);
 	}
 
-	pub fn loop_music_file(&mut self, song_path: &str) {
-		let mut song = Music::new_from_file(song_path).expect("Error loading music file");
+	pub fn loop_music_file(&mut self, song_full_path: &str) {
+		let mut song = Music::new_from_file(song_full_path).expect("Error loading music file");
 		song.set_loop(true);
 		song.play();
 		self.music = Some(song);
@@ -171,8 +180,8 @@ pub trait Screen {
 
 pub struct Timer {
 	clock: Clock,
-	min_delta: Time,
-	max_delta: Time
+	pub min_delta: Time,
+	pub max_delta: Time
 }
 
 impl Timer {

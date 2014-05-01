@@ -50,9 +50,7 @@ impl Animation {
 			self.timer -= self.length;
 			self.frame = self.frame + 1;
 		}
-		while self.frame >= self.sprites.len() {
-			self.frame -= self.sprites.len();
-		}
+		self.frame %= self.sprites.len();
 	}
 	pub fn add_sprite(&mut self, sprite: &Sprite) {
 		self.sprites.push(sprite.clone().expect("Couldn't clone sprite for anim"));
@@ -73,9 +71,6 @@ impl Animation {
 		self.update_all_sprites();
 	}
 	pub fn get_current_sprite<'a>(&'a self) -> &'a Sprite {
-		// let idx_float = (self.timer / self.length) * (self.sprites.len()-1) as f32;
-		// let idx = idx_float.round() as uint;
-		// self.sprites.get(idx)
 		self.sprites.get(self.frame)
 	}
 	/* private */

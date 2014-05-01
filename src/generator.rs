@@ -38,7 +38,7 @@ pub struct Dungeon {
 	pub tiles: Vec<Tile>,
 	path_length: int,
 	pub start_coords: (int,int),
-	// end_coords: (int,int),
+	pub end_coords: (int,int),
 }
 
 #[deriving(Clone)]
@@ -75,7 +75,7 @@ impl Dungeon {
 			}),
 			path_length: 0,
 			start_coords: (0,0),
-			// end_coords: (0,0),
+			end_coords: (0,0),
 		}
 	}
 
@@ -406,11 +406,14 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 	);
 	d.start_coords = (start_x,start_y);
 
+	let end_x = end_room.x + end_room.w / 2;
+	let end_y = end_room.y + end_room.h / 2;
 	let set_end = d.set_tile(
-		end_room.x + end_room.w / 2,
-		end_room.y + end_room.h / 2,
+		end_x,
+		end_y,
 		StairsDown
 	);
+	d.end_coords = (end_x,end_y);
 
 	if !set_start || !set_end {
 		fail!("Failed to set start/end ({}/{})",set_start,set_end);
@@ -476,6 +479,11 @@ impl Dungeon {
 				let tile = self.tiles.get_mut(idx as uint);
 				tile.x = x;
 				tile.y = y;
+				match tile.t {
+					StairsUp => self.start_coords = (tile.x,tile.y),
+					StairsDown => self.end_coords = (tile.x,tile.y),
+					_ => {}
+				}
 			}
 		}
 	}
