@@ -154,7 +154,7 @@ impl GameplayScreen  {
 		// connect accessible nodes
 		for y in range(0,dungeon.height) {
 			for x in range(0,dungeon.width) {
-				let idx_opt = ret.to_tile_idx( (x, y) );
+				let idx_opt = ret.tile_idx_from_coords( (x, y) );
 				let idx = idx_opt.expect("Shouldn't be negative");
 				match ret.tiles.get(idx).is_passable() {
 					false => {}
@@ -424,7 +424,7 @@ impl GameplayScreen  {
 				// }
 
 				// for coords in active.iter() {
-				// 	let idx = self.to_tile_idx(coords.clone()).expect("Aw snap");
+				// 	let idx = self.tile_idx_from_coords(coords.clone()).expect("Aw snap");
 				// 	for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
 				// 		sprite.set_color(&Color::green());
 				// 	}
@@ -459,16 +459,40 @@ impl GameplayScreen  {
 
 			// creature-wall collision
 			for coords in active.iter() {
-				let idx = self.to_tile_idx(coords.clone()).expect("Can't collide creature/wall for negative index");
+				let idx = self.tile_idx_from_coords(coords.clone())
+					.expect("Can't collide creature/wall for negative index");
 				let data = self.tiles.get(idx);
 				if !data.is_passable()	{
-					let creature = self.creatures.get_mut(i);
-					let offset = hit.resolve_weighted(&data.bounds,&creature.get_bounds(),1.0);
+					let offset = hit.resolve_weighted(&data.bounds,&self.
+							creatures.get(i).get_bounds(),1.0);
 					match offset {
 						None => {}
 						Some(coords) => {
 							let (_,offset) = coords;
-							creature.move(&offset);
+							let (tx,ty) = (data.tile.x,data.tile.y);
+							let check = if offset.x > 0.0 {
+								Some((tx+1,ty))
+							} else if offset.x < 0.0 {
+								Some((tx-1,ty))
+							} else if offset.y > 0.0 {
+								Some((tx,ty+1))
+							} else if offset.y < 0.0 {
+								Some((tx,ty-1))
+							} else {
+								None
+							};
+
+							match check {
+								None => {},
+								Some(check_coords) => {
+									if !active.contains(&check_coords) ||
+											self.tile_data_from_coords(check_coords).
+											expect("hunH?!").is_passable() {
+										self.creatures.get_mut(i).move(&offset);
+									}
+								}
+							}
+
 						}
 					}
 				}
@@ -502,17 +526,17 @@ impl GameplayScreen  {
 		let view_top = view_center.y - view_half.y;
 		let view_bottom = view_center.y + view_half.y;
 
-		let coord_left = self.to_coord_idx(view_left);
-		let coord_right = self.to_coord_idx(view_right);
-		let coord_top = self.to_coord_idx(view_top);
-		let coord_bottom = self.to_coord_idx(view_bottom);
+		let coord_left = self.tile_coord_from_position(view_left);
+		let coord_right = self.tile_coord_from_position(view_right);
+		let coord_top = self.tile_coord_from_position(view_top);
+		let coord_bottom = self.tile_coord_from_position(view_bottom);
 
 		self.vis_x = range(coord_left,coord_right + 1);
 		self.vis_y = range(coord_top,coord_bottom + 1);
 
 		for y in self.vis_y.clone() {
 			for x in self.vis_x.clone() {
-				match self.to_tile_idx((x,y)) {
+				match self.tile_idx_from_coords((x,y)) {
 					None => {},
 					Some(idx) => {
 						// set visibility based on player
@@ -524,7 +548,7 @@ impl GameplayScreen  {
 							}
 							Some(hero) => {
 								let hero_pos = self.creatures.get(hero).get_position();
-								let hero_coords = self.to_tile_coords((hero_pos.x,hero_pos.y));
+								let hero_coords = self.tile_coords_from_position((hero_pos.x,hero_pos.y));
 								let (hero_x,hero_y) = hero_coords;
 								let t = self.tiles.get(idx).tile;
 								
@@ -557,8 +581,8 @@ impl GameplayScreen  {
 		self.path_count += 1;
 		self.creatures.get_mut(i).path_id = Some(id);
 		self.creatures.get_mut(i).awake = true;
-		let hero_coords = self.get_creature_tile_coords(self.creatures.get(hero));
-		let rawr_coords = self.get_creature_tile_coords(self.creatures.get(i));
+		let hero_coords = self.tile_coords_from_creature(self.creatures.get(hero));
+		let rawr_coords = self.tile_coords_from_creature(self.creatures.get(i));
 		let solver_idx = i % self.solvers.len();
 		self.solvers.get_mut(solver_idx).queue_solve(
 			id,
@@ -574,8 +598,8 @@ impl GameplayScreen  {
 		let top_left = (bounds.left,bounds.top);
 		let bottom_right = (bounds.left + bounds.width, bounds.top + bounds.height);
 
-		let top_left_tile = self.to_tile_coords(top_left);
-		let bottom_right_tile = self.to_tile_coords(bottom_right);
+		let top_left_tile = self.tile_coords_from_position(top_left);
+		let bottom_right_tile = self.tile_coords_from_position(bottom_right);
 
 		let (x1,y1) = top_left_tile;
 		let (x2,y2) = bottom_right_tile;
@@ -589,23 +613,30 @@ impl GameplayScreen  {
 		active_tiles
 	}
 
-	fn get_creature_tile_coords(&self, creature: &Creature) -> (int,int) {
+	fn tile_coords_from_creature(&self, creature: &Creature) -> (int,int) {
 		let pos = creature.get_position();
-		self.to_tile_coords((pos.x,pos.y))
+		self.tile_coords_from_position((pos.x,pos.y))
 	}
 
-	fn to_tile_coords(&self, pos: (f32, f32) ) -> (int,int) {
+	fn tile_coords_from_position(&self, pos: (f32, f32) ) -> (int,int) {
 		let (x,y) = pos;
-		(self.to_coord_idx(x), self.to_coord_idx(y))
+		(self.tile_coord_from_position(x), self.tile_coord_from_position(y))
 	}
 
-	fn to_coord_idx(&self, coord: f32) -> int {
+	fn tile_coord_from_position(&self, coord: f32) -> int {
 		let t_size = self.tile_size as f32;
 		let t_half = self.tile_size as f32 / 2.0;
 		((coord + t_half)/t_size).floor() as int
 	}
 
-	fn to_tile_idx(&self, tile_coords: (int,int) ) -> Option<uint> {
+	fn tile_data_from_coords<'a>(&'a self, tile_coords: (int,int)) -> Option<&'a TileData> {
+		match self.tile_idx_from_coords(tile_coords) {
+			None => None,
+			Some(idx) => Some(self.tiles.get(idx))
+		}
+	}
+
+	fn tile_idx_from_coords(&self, tile_coords: (int,int) ) -> Option<uint> {
 		let (x_idx,y_idx) = tile_coords;
 
 		if x_idx < 0 || y_idx < 0 || x_idx >= self.dungeon.width
@@ -632,14 +663,14 @@ impl GameplayScreen  {
 			if creature.player {
 				let pos = creature.get_position();
 				hero_pos = Some(pos);
-				hero_tile_coords = Some(self.to_tile_coords( (pos.x,pos.y) ));
+				hero_tile_coords = Some(self.tile_coords_from_position( (pos.x,pos.y) ));
 				break;
 			}
 		}
 
 		for y in self.vis_y.clone() {
 			for x in self.vis_x.clone() {
-				match self.to_tile_idx((x,y)) {
+				match self.tile_idx_from_coords((x,y)) {
 
 					None => {}
 
@@ -721,16 +752,17 @@ impl GameplayScreen  {
 	}
 
 	fn los(&self, a: &Vector2f, b: &Vector2f) -> bool {
-		let (ax,ay) = self.to_tile_coords((a.x,a.y));
-		let (bx,by) = self.to_tile_coords((b.x,b.y));
+		let (ax,ay) = self.tile_coords_from_position((a.x,a.y));
+		let (bx,by) = self.tile_coords_from_position((b.x,b.y));
 		self.los_coords(ax,ay,bx,by)
 	}
 
 	fn get_tile_los(&self, coords: (int,int) ) -> bool {
-		let idx = self.to_tile_idx( coords ).expect( format!("FAILED getting tile LOS {}",coords));
+		let idx = self.tile_idx_from_coords( coords ).expect( format!("FAILED getting tile LOS {}",coords));
 		self.tiles.get(idx).is_clear()
 	}
 
+	// TODO better LOS algorithm
 	fn los_coords(&self, x1: int, y1: int, x2: int, y2: int) -> bool {
 		let mut xstep;
 		let mut ystep;
@@ -865,7 +897,7 @@ impl GameplayScreen {
 		let (ox,oy) = offset;
 		let x2 = x+ox;
 		let y2 = y+oy;
-		let idx2_opt = self.to_tile_idx( (x2, y2) );
+		let idx2_opt = self.tile_idx_from_coords( (x2, y2) );
 		match idx2_opt {
 			None => false,
 			Some(idx2) => match self.tiles.get(idx2).is_passable() {
@@ -878,8 +910,8 @@ impl GameplayScreen {
 	// closure for diagonal connections
 	fn connect_diag (&mut self, x: int, y: int, offset: (int,int),
 			check1: (int,int), check2: (int,int)) -> bool {
-		let check1_idx_opt = self.to_tile_idx(check1);
-		let check2_idx_opt = self.to_tile_idx(check2);
+		let check1_idx_opt = self.tile_idx_from_coords(check1);
+		let check2_idx_opt = self.tile_idx_from_coords(check2);
 		match (check1_idx_opt,check2_idx_opt) {
 			(Some(check1_idx),Some(check2_idx)) => match (
 				self.tiles.get(check1_idx).is_passable(),
