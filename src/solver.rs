@@ -1,8 +1,6 @@
-use std::comm::TryRecvResult;
 use std::comm::{Empty,Disconnected,Data};
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
-use std::rt::thread::Thread;
 use sync::{Arc,RWLock};
 
 struct Problem {

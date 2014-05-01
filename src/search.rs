@@ -1,6 +1,5 @@
 use graph::{Graph,GraphNode};
 use collections::hashmap::{HashMap,HashSet};
-use std::num::pow;
 
 pub trait SearchStrategy {
 	fn solve(&self, graph: &Graph, start: (int,int), end: (int,int)) -> Option<Vec<(int,int)>>;

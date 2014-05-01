@@ -4,8 +4,6 @@ extern crate collections;
 extern crate native;
 extern crate sync;
 
-use rand::{XorShiftRng,SeedableRng};
-
 use engine::launch;
 use gameplay::GameplayScreen;
 use generator::generate_default;

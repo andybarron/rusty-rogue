@@ -1,5 +1,4 @@
 use rsfml::system::Vector2f;
-use rsfml::graphics::rc::Sprite;
 use rsfml::graphics::FloatRect;
 use rsfml::graphics::RenderWindow;
 use animation::Animation;
@@ -53,10 +52,11 @@ impl Creature {
 		self.get_bounds_trimmed(0.0)
 	}
 
+	// TODO make better
 	pub fn get_bounds_trimmed(&self, trim: f32) -> FloatRect {
 		let mut bounds = self.anim.get_current_sprite().get_global_bounds();
-		let mut reduce_h = bounds.height / 2.0;
-		let mut reduce_w = bounds.width / 4.0;
+		let reduce_h = bounds.height / 2.0;
+		let reduce_w = bounds.width / 4.0;
 
 		bounds.height -= reduce_h;
 		bounds.top += reduce_h;

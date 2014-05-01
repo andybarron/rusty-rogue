@@ -1,14 +1,13 @@
 use rsfml::graphics::{RenderWindow};
-use rsfml::window::{VideoMode, ContextSettings, DefaultStyle, event, keyboard};
+use rsfml::window::{VideoMode, ContextSettings, DefaultStyle, event};
 use rsfml::window::keyboard::Key;
 use rsfml::window::event::Event;
 use rsfml::system::{Clock, Time, sleep, Vector2f};
-use rsfml::graphics::{Color,Vertex,VertexArray,Lines};
+use rsfml::graphics::{Color,VertexArray,Lines};
 
 use rsfml::audio::SoundBuffer;
 use rsfml::audio::rc::Sound;
 use rsfml::audio::Music;
-use rsfml::audio::Status;
 use rsfml::audio;
 
 use util::get_rc_resource;
@@ -61,7 +60,7 @@ pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 		}
 
 		// update game state
-		let mut ret = s.update(&mut game, &mut window, t.get_delta());
+		let ret = s.update(&mut game, &mut window, t.get_delta());
 
 		// switch to new state if necessary
 		match ret {

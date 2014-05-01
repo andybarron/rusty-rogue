@@ -1,6 +1,5 @@
 use rsfml::graphics::rc::Sprite;
 use rsfml::system::Vector2f;
-use rsfml::graphics::FloatRect;
 
 pub struct Animation {
 	sprites: Vec<Sprite>,
@@ -33,7 +32,7 @@ impl Clone for Animation {
 impl Animation {
 	/* public */
 	pub fn new(length: f32) -> Animation {
-		let mut this = Animation {
+		let this = Animation {
 			sprites: Vec::new(),
 			position: Vector2f::new(0.0,0.0),
 			origin: Vector2f::new(0.0,0.0),

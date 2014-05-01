@@ -1,6 +1,5 @@
 use std::num::pow;
 use std::vec::Vec;
-use std::slice::Items;
 use rand::{Rng,XorShiftRng,SeedableRng};
 use util::map_range_f32;
 

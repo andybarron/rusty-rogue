@@ -1,4 +1,3 @@
-use std::mem::swap;
 use std::iter::Range;
 use collections::hashmap::HashMap;
 
@@ -15,10 +14,9 @@ use rsfml::system::Vector2f;
 use rsfml::window::keyboard;
 use rsfml::window::keyboard::Key;
 use rsfml::graphics::rc::CircleShape;
-use rsfml::graphics::rc::RectangleShape;
 
 use engine::{Game,Screen};
-use generator::{generate_default,Tile,TileType,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster};
+use generator::{Tile,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster};
 use util::get_gfx_path;
 use util::get_rc_resource;
 use util::get_sprite_coords;
@@ -30,8 +28,7 @@ use entities::Creature;
 use animation::Animation;
 
 use graph::Graph;
-use search::{SearchStrategy,AStarSearch};
-use solver::{Solver,Solution};
+use solver::Solver;
 
 static SOLVER_THREAD_COUNT : uint = 4;
 
@@ -163,18 +160,16 @@ impl GameplayScreen  {
 				match ret.tiles.get(idx).is_passable() {
 					false => {}
 					true => {
-						let t_sz = t_sz as f32;
 						// only check R, DR, D, DL
 						// yay undirected graphs!
 
 						// check R and D
-						let c_r = ret.connect_direct(x,y,(1,0));
-						let c_d = ret.connect_direct(x,y,(0,1));
+						ret.connect_direct(x,y,(1,0));
+						ret.connect_direct(x,y,(0,1));
 
 						// diagonal
-						let c_dr = ret.connect_diag(x,y,(1,1),(x+1,y),(x,y+1));
-						let c_dl = ret.connect_diag(x,y,(-1,1),(x-1,y),(x,y+1));
-
+						ret.connect_diag(x,y,(1,1),(x+1,y),(x,y+1));
+						ret.connect_diag(x,y,(-1,1),(x-1,y),(x,y+1));
 					}
 				}
 			}
@@ -390,7 +385,7 @@ impl GameplayScreen  {
 							let pos_dif = wv - monster_pos;
 							let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
 							if dif_len < dist_remaining {
-								let mut cr = self.creatures.get_mut(i);
+								let cr = self.creatures.get_mut(i);
 								cr.set_position(&wv);
 								cr.pop_path_node();
 								dist_remaining -= dif_len;
@@ -426,8 +421,6 @@ impl GameplayScreen  {
 
 
 		// figure out visible tiles
-
-		let radius = self.tile_size as f32 / 4.0;
 
 		let view_size = self.view.get_size();
 		let view_center = self.view.get_center();
@@ -660,14 +653,12 @@ impl GameplayScreen  {
 
 		window.clear(&Color::black());
 
-		let mut hero_tile_coords = None;
 		let mut hero_pos = None;
 
 		for creature in self.creatures.iter() {
 			if creature.player {
 				let pos = creature.get_position();
 				hero_pos = Some(pos);
-				hero_tile_coords = Some(self.tile_coords_from_position( (pos.x,pos.y) ));
 				break;
 			}
 		}
@@ -795,7 +786,7 @@ impl GameplayScreen  {
 		if ddx >= ddy {
 			error = dx;
 			error_prev = error;
-			for i in range(0,dx) {
+			for _ in range(0,dx) {
 				x += xstep;
 				error += ddy;
 				if error > ddx {
@@ -816,7 +807,7 @@ impl GameplayScreen  {
 		} else {
 			error = dy;
 			error_prev = error;
-			for i in range(0,dy) {
+			for _ in range(0,dy) {
 				y += ystep;
 				error += ddx;
 				if error > ddy {

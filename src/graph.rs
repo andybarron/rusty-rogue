@@ -121,8 +121,8 @@ impl GraphNode {
 		self.y
 	}
 	pub fn distance_to(&self, other: &GraphNode) -> f32 {
-		let mut dy_sq: int = pow(other.get_y()-self.get_y() , 2);
-		let mut dx_sq: int = pow(other.get_x()-self.get_x() , 2);
+		let dy_sq: int = pow(other.get_y()-self.get_y(), 2);
+		let dx_sq: int = pow(other.get_x()-self.get_x(), 2);
 
 		(dx_sq as f32 + dy_sq as f32).sqrt()
 	}
