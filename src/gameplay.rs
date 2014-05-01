@@ -332,7 +332,6 @@ impl GameplayScreen  {
 
 				// chase player!
 				let hero_pos = self.creatures.get(hero).get_position();
-				let chase_dist = 16.0 * delta;
 				for i in range(0, self.creatures.len()) {
 					if i == hero { continue; }
 
@@ -366,13 +365,13 @@ impl GameplayScreen  {
 					let has_path = self.creatures.get(i).has_path();
 
 					let req_path = sees_player &&
-						( (!has_path) || (!searching_path && self.creatures.get(i).path_age > 0.1) );
+						( (!has_path) || (!searching_path && self.creatures.get(i).path_age > 0.25) );
 
 					if req_path {
 						self.request_path_update(i,hero);
 					}
 
-					
+					// TODO reconcile this with collision somehow
 					if has_path {
 						self.creatures.get_mut(i).path_age += delta;
 						let tsz = self.tile_size as f32;
@@ -384,7 +383,7 @@ impl GameplayScreen  {
 						);
 						let wv = Vector2f::new(wx,wy);
 
-
+						let chase_dist = 16.0 * delta;
 						let mut dist_remaining = chase_dist;
 
 						while dist_remaining > 0.0 && self.creatures.get(i).has_path() {
