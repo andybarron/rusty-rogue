@@ -87,6 +87,10 @@ impl Creature {
 		window.draw(self.anim.get_current_sprite());
 	}
 
+	pub fn set_scale2f(&mut self, x: f32, y: f32) {
+		self.anim.set_scale2f(x,y);
+	}
+
 	pub fn set_position2f(&mut self, x: f32, y: f32) {
 		self.pos.x = x;
 		self.pos.y = y;

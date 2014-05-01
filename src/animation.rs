@@ -57,6 +57,11 @@ impl Animation {
 		let idx = self.sprites.len()-1;
 		self.update_sprite( idx );
 	}
+	pub fn set_scale2f(&mut self, x: f32, y: f32) {
+		self.scale.x = x;
+		self.scale.y = y;
+		self.update_all_sprites();
+	}
 	pub fn set_origin2f(&mut self, x: f32, y: f32) {
 		self.origin.x = x;
 		self.origin.y = y;

@@ -51,6 +51,8 @@ pub struct GameplayScreen {
 	path_count: uint,
 	vis_x: Range<int>,
 	vis_y: Range<int>,
+	player_idx: Option<uint>,
+	collide: CollisionResolver,
 }
 
 impl GameplayScreen  {
@@ -86,6 +88,8 @@ impl GameplayScreen  {
 			path_count: 0,
 			vis_x: range(0,1),
 			vis_y: range(0,1),
+			player_idx: None,
+			collide: CollisionResolver::new(),
 		};
 		ret.debug_node_circle.set_origin2f(debug_node_radius,debug_node_radius);
 		ret.debug_node_circle.set_fill_color( &Color::new_RGBA(0,0,255,150) );
@@ -267,39 +271,23 @@ impl GameplayScreen  {
 
 		self.view.move(&pan);
 
-		let mut player: Option<uint> = None;
+		// depth sort
+		self.sprite_depth_sort();
 
-		// simple bubble depth sort -- acceptable because after init,
-		// creatures swap depth values relatively rarely, and bubble
-		// sort only uses O(1) memory ;)
-		// TODO insertion sort because it's slightly better
-		let mut shuffled = true;
-		while shuffled {
-			shuffled = false;
-			for i in range(0,self.creatures.len()-1) {
-				let a = i;
-				let b = i+1;
-				let apos = self.creatures.get(a).get_position();
-				let bpos = self.creatures.get(b).get_position();
-				let ay = apos.y;
-				let by = bpos.y;
-				if by < ay {
-					shuffled = true;
-					let a_copy = self.creatures.get(a).clone();
-					*self.creatures.get_mut(a) = self.creatures.get(b).clone();
-					*self.creatures.get_mut(b) = a_copy;
-
+		// find player if necessary
+		let player = match self.player_idx {
+			Some(idx) => Some(idx),
+			None => {
+				let mut fnd = None;
+				for i in range(0,self.creatures.len()) {
+					if self.creatures.get(i).player {
+						fnd = Some(i);
+						break;
+					}
 				}
+				fnd
 			}
-		}
-
-		// find player...
-		for i in range(0,self.creatures.len()) {
-			if self.creatures.get(i).player {
-				player = Some(i);
-				break;
-			}
-		}
+		};
 
 		// update player!
 		match player {
@@ -323,6 +311,7 @@ impl GameplayScreen  {
 					None => { }
 					Some(deg) => { self.creatures.get_mut(hero).move_polar_deg(dist,deg); }
 				}
+
 				// get solutions
 				let mut path_map: HashMap<uint,Vec<(int,int)>> = HashMap::new();
 				for solver in self.solvers.mut_iter() {
@@ -384,120 +373,46 @@ impl GameplayScreen  {
 					}
 
 					
-					match has_path {
-						false => {} // already taken care of
-						true => {
-							self.creatures.get_mut(i).path_age += delta;
-							let tsz = self.tile_size as f32;
-							let first_coords = self.creatures.get(i).get_target_node().expect("UGH");
-							let (tx,ty) = first_coords;
-							let (wx,wy) = (
-								tx as f32 * tsz,
-								ty as f32 * tsz
-							);
-							let wv = Vector2f::new(wx,wy);
+					if has_path {
+						self.creatures.get_mut(i).path_age += delta;
+						let tsz = self.tile_size as f32;
+						let first_coords = self.creatures.get(i).get_target_node().expect("UGH");
+						let (tx,ty) = first_coords;
+						let (wx,wy) = (
+							tx as f32 * tsz,
+							ty as f32 * tsz
+						);
+						let wv = Vector2f::new(wx,wy);
 
 
-							let pos_dif = wv - monster_pos;
-							let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
-							if dif_len < chase_dist {
-								let mut cr = self.creatures.get_mut(i);
-								cr.set_position(&wv);
-								cr.pop_path_node();
-							} else {
-								let (dx,dy) = (pos_dif.x,pos_dif.y);
-								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
-							}
+						let pos_dif = wv - monster_pos;
+						let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
+						let mut dist_remaining = chase_dist;
+
+						// while dist_remaining > 0.0 && self.creatures.get(i).has_path() {
+							
+						// }
+
+
+
+
+						if dif_len < chase_dist {
+							let mut cr = self.creatures.get_mut(i);
+							cr.set_position(&wv);
+							cr.pop_path_node();
+						} else {
+							let (dx,dy) = (pos_dif.x,pos_dif.y);
+							self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
 						}
+
 					}
 				}
-
-
-				// // uncommenting this bit will paint "nearby" tiles
-				// let hero_box = self.creatures.get(hero).get_bounds();
-				// let active = self.get_active_tiles( &hero_box );
-
-				// for data in self.tiles.mut_iter() {
-				// 	for sprite in data.sprites.mut_iter() {
-				// 		sprite.set_color(&Color::white());
-				// 	}
-				// }
-
-				// for coords in active.iter() {
-				// 	let idx = self.tile_idx_from_coords(coords.clone()).expect("Aw snap");
-				// 	for sprite in self.tiles.get_mut(idx).sprites.mut_iter() {
-				// 		sprite.set_color(&Color::green());
-				// 	}
-				// }
 			}
 		}
 
 
 		// collision
-		let mut hit = CollisionResolver::new();
-		for i in range(0,self.creatures.len()) {
-
-			let bounds = self.creatures.get(i).get_bounds();
-			let active = self.get_active_tiles( &bounds );
-
-			// creature-creature collision
-			for j in range(0, self.creatures.len()) {
-				if i == j { continue; }
-
-				let i_box = &self.creatures.get(i).get_bounds();
-				let j_box = &self.creatures.get(j).get_bounds();
-				let offsets = hit.resolve_weighted(i_box,j_box,0.5);
-				match offsets {
-					None => {},
-					Some(vectors) => {
-						let (a,b) = vectors;
-						self.creatures.get_mut(i).move(&a);
-						self.creatures.get_mut(j).move(&b);
-					}
-				}
-			}
-
-			// creature-wall collision
-			for coords in active.iter() {
-				let idx = self.tile_idx_from_coords(coords.clone())
-					.expect("Can't collide creature/wall for negative index");
-				let data = self.tiles.get(idx);
-				if !data.is_passable()	{
-					let offset = hit.resolve_weighted(&data.bounds,&self.
-							creatures.get(i).get_bounds(),1.0);
-					match offset {
-						None => {}
-						Some(coords) => {
-							let (_,offset) = coords;
-							let (tx,ty) = (data.tile.x,data.tile.y);
-							let check = if offset.x > 0.0 {
-								Some((tx+1,ty))
-							} else if offset.x < 0.0 {
-								Some((tx-1,ty))
-							} else if offset.y > 0.0 {
-								Some((tx,ty+1))
-							} else if offset.y < 0.0 {
-								Some((tx,ty-1))
-							} else {
-								None
-							};
-
-							match check {
-								None => {},
-								Some(check_coords) => {
-									if !active.contains(&check_coords) ||
-											self.tile_data_from_coords(check_coords).
-											expect("hunH?!").is_passable() {
-										self.creatures.get_mut(i).move(&offset);
-									}
-								}
-							}
-
-						}
-					}
-				}
-			}
-		}
+		self.resolve_all_collisions();
 
 		// updates
 		for creature in self.creatures.mut_iter() {
@@ -512,6 +427,8 @@ impl GameplayScreen  {
 			None => {},
 			Some(hero) => self.view.set_center( &self.creatures.get(hero).get_position() )
 		}
+
+
 
 		// figure out visible tiles
 
@@ -648,6 +565,98 @@ impl GameplayScreen  {
 		if idx >= self.tiles.len() { return None; }
 
 		Some( idx )
+	}
+
+	fn sprite_depth_sort(&mut self) {
+		// simple bubble depth sort -- acceptable because after init,
+		// creatures swap depth values relatively rarely, and bubble
+		// sort only uses O(1) memory ;)
+		// TODO insertion sort because it's slightly better
+		let mut shuffled = true;
+		while shuffled {
+			shuffled = false;
+			for i in range(0,self.creatures.len()-1) {
+				let a = i;
+				let b = i+1;
+				let apos = self.creatures.get(a).get_bounds();
+				let bpos = self.creatures.get(b).get_bounds();
+				let ay = apos.top + apos.height;
+				let by = bpos.top + bpos.height;
+				if by < ay {
+					shuffled = true;
+					let a_copy = self.creatures.get(a).clone();
+					*self.creatures.get_mut(a) = self.creatures.get(b).clone();
+					*self.creatures.get_mut(b) = a_copy;
+
+				}
+			}
+		}
+	}
+
+	fn resolve_all_collisions(&mut self) {
+		for i in range(0,self.creatures.len()) {
+
+			let bounds = self.creatures.get(i).get_bounds();
+			let active = self.get_active_tiles( &bounds );
+
+			// creature-creature collision
+			for j in range(0, self.creatures.len()) {
+				if i == j { continue; }
+
+				let i_box = &self.creatures.get(i).get_bounds();
+				let j_box = &self.creatures.get(j).get_bounds();
+				let offsets = self.collide.resolve_weighted(i_box,j_box,0.5);
+				match offsets {
+					None => {},
+					Some(vectors) => {
+						let (a,b) = vectors;
+						self.creatures.get_mut(i).move(&a);
+						self.creatures.get_mut(j).move(&b);
+					}
+				}
+			}
+
+			// creature-wall collision
+			for coords in active.iter() {
+				let idx = self.tile_idx_from_coords(coords.clone())
+					.expect("Can't collide creature/wall for negative index");
+				let data = self.tiles.get(idx);
+				if !data.is_passable()	{
+					let offset = self.collide.resolve_weighted(&data.bounds,&self.
+							creatures.get(i).get_bounds(),1.0);
+					match offset {
+						None => {}
+						Some(coords) => {
+							let (_,offset) = coords;
+							let (tx,ty) = (data.tile.x,data.tile.y);
+							let check = if offset.x > 0.0 {
+								Some((tx+1,ty))
+							} else if offset.x < 0.0 {
+								Some((tx-1,ty))
+							} else if offset.y > 0.0 {
+								Some((tx,ty+1))
+							} else if offset.y < 0.0 {
+								Some((tx,ty-1))
+							} else {
+								None
+							};
+
+							match check {
+								None => {},
+								Some(check_coords) => {
+									if !active.contains(&check_coords) ||
+											self.tile_data_from_coords(check_coords).
+											expect("hunH?!").is_passable() {
+										self.creatures.get_mut(i).move(&offset);
+									}
+								}
+							}
+
+						}
+					}
+				}
+			}
+		}
 	}
 
 	fn draw(&self, game : &mut Game, window : &mut RenderWindow) {
