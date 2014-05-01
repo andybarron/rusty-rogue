@@ -385,26 +385,22 @@ impl GameplayScreen  {
 						let wv = Vector2f::new(wx,wy);
 
 
-						let pos_dif = wv - monster_pos;
-						let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
 						let mut dist_remaining = chase_dist;
 
-						// while dist_remaining > 0.0 && self.creatures.get(i).has_path() {
-							
-						// }
-
-
-
-
-						if dif_len < chase_dist {
-							let mut cr = self.creatures.get_mut(i);
-							cr.set_position(&wv);
-							cr.pop_path_node();
-						} else {
-							let (dx,dy) = (pos_dif.x,pos_dif.y);
-							self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+						while dist_remaining > 0.0 && self.creatures.get(i).has_path() {
+							let pos_dif = wv - monster_pos;
+							let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
+							if dif_len < dist_remaining {
+								let mut cr = self.creatures.get_mut(i);
+								cr.set_position(&wv);
+								cr.pop_path_node();
+								dist_remaining -= dif_len;
+							} else {
+								let (dx,dy) = (pos_dif.x,pos_dif.y);
+								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+								dist_remaining = 0.0;
+							}
 						}
-
 					}
 				}
 			}
