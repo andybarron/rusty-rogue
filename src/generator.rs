@@ -19,7 +19,7 @@ pub enum Entity {
 	Missingno
 }
 
-#[deriving(Clone)]
+#[deriving(Clone,Eq)]
 pub enum TileType {
 	Floor,
 	Wall,
@@ -88,6 +88,16 @@ impl Dungeon {
 			Some(self.tiles.get(idx as uint))
 		}
 
+	}
+
+	pub fn get_tile_type(&self, x: int, y: int) -> Option<TileType> {
+		let idx = x+y*self.width;
+
+		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as int {
+			None
+		} else {
+			Some(self.tiles.get(idx as uint).t)
+		}
 	}
 
 	pub fn get_tile_vector<'a>(&'a self) -> &'a Vec<Tile> {

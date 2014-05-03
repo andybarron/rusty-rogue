@@ -16,7 +16,7 @@ use rsfml::window::keyboard::Key;
 use rsfml::graphics::rc::CircleShape;
 
 use engine::{Game,Screen};
-use generator::{Tile,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster};
+use generator::{Tile,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster,Wall};
 use util::get_gfx_path;
 use util::get_rc_resource;
 use util::get_sprite_coords;
@@ -110,6 +110,19 @@ impl GameplayScreen  {
 		let coords_up = grab_tile_rect(9,7);
 		let coords_dn = grab_tile_rect(10,7);
 
+		// get sprite directly from coords
+		let get_spr = |x: uint, y: uint| -> Sprite {
+			let coords = grab_tile_rect(x,y);
+			let mut spr = Sprite::new_with_texture(rc_tex.clone()).expect("erp");
+			spr.set_texture_rect(&coords);
+			spr
+		};
+
+		let b_n = get_spr(9,3);
+		let b_s = get_spr(9,5);
+		let b_e = get_spr(10,4);
+		let b_w = get_spr(8,4);
+
 		// for each tile in the dungeon
 		for tile in dungeon.get_tile_vector().iter() {
 
@@ -120,7 +133,7 @@ impl GameplayScreen  {
 			// load tile coordinates based on tile type
 			let tile_coords = match tile.t {
 				Floor => ~[coords_floor],
-				Door => ~[coords_hall,coords_door],
+				Door => ~[coords_hall], // TODO draw door ON TOP of walls
 				Corridor => ~[coords_hall],
 				StairsUp => ~[coords_floor,coords_up],
 				StairsDown => ~[coords_floor,coords_dn],
@@ -138,6 +151,13 @@ impl GameplayScreen  {
 				spr.set_position( &Vector2f::new(x as f32,y as f32) );
 				tile_data.sprites.push(spr);
 			}
+
+
+			let wall_off = 1.0;
+			ret.add_wall_check(&mut tile_data, (0,-1), &b_n, wall_off);
+			ret.add_wall_check(&mut tile_data, (0,1), &b_s, wall_off);
+			ret.add_wall_check(&mut tile_data, (1,0), &b_e, wall_off);
+			ret.add_wall_check(&mut tile_data, (-1,0), &b_w, wall_off);
 
 			ret.tiles.push(tile_data);
 		}
@@ -176,12 +196,7 @@ impl GameplayScreen  {
 		}
 		println!("Done with graph!");
 
-		let get_spr = |x: uint, y: uint| -> Sprite {
-			let coords = grab_tile_rect(x,y);
-			let mut spr = Sprite::new_with_texture(rc_tex.clone()).expect("erp");
-			spr.set_texture_rect(&coords);
-			spr
-		};
+
 
 		let get_walk_cycle_frames = |x: uint, y: uint| -> Vec<IntRect> {
 			vec!(
@@ -856,8 +871,8 @@ impl Screen for GameplayScreen {
 
 	fn key_press(&mut self, game : &mut Game, window : &mut RenderWindow, key : Key) -> bool {
 		match key {
-			keyboard::Subtract => {self.zoom_index -= 1;true}
-			keyboard::Equal => {self.zoom_index += 1;true}
+			keyboard::Comma => {self.zoom_index -= 1;true}
+			keyboard::Period => {self.zoom_index += 1;true}
 			keyboard::BackSlash => {self.debug = !self.debug;true}
 			_ => false
 		}
@@ -886,10 +901,7 @@ impl TileData {
 			tile: tile.clone(), seen: false, visible: false }
 	}
 	pub fn is_passable(&self) -> bool {
-		match self.sprites.len() {
-			0 => false,
-			_ => true
-		}
+		self.tile.t != Wall
 	}
 	pub fn is_clear(&self) -> bool {
 		self.is_passable()
@@ -930,6 +942,34 @@ impl GameplayScreen {
 				(_,_) => false
 			},
 			(_,_) => false
+		}
+	}
+
+	fn add_wall_check(&mut self, tile_data: &mut TileData, offset: (int,int), wall: &Sprite,
+			wall_off: f32) -> bool {
+		if offset == (0,0) || tile_data.tile.t == Wall { return false; }
+		let (ox,oy) = offset;
+		let (x,y) = (tile_data.tile.x,tile_data.tile.y);
+		match self.dungeon.get_tile_type(x+ox,y+oy) {
+			Some(t) => match t {
+				Wall => {
+					let mut spr = wall.clone().expect("fail in add_wall_check");
+					let half = self.tile_sizef / 2.0;
+					spr.set_origin2f(half,half);
+					spr.set_position2f(
+						x as f32 * self.tile_sizef,
+						y as f32 * self.tile_sizef
+					);
+					spr.move2f(
+						wall_off * ox as f32,
+						wall_off * oy as f32
+					);
+					tile_data.sprites.push(spr);
+					true
+				}
+				_ => false
+			},
+			_ => false
 		}
 	}
 
