@@ -42,7 +42,8 @@ pub struct GameplayScreen {
 	zoom_index: int,
 	zoom_levels: ~[f32],
 	creatures: Vec<Creature>,
-	debug: bool,
+	debug_graph: bool,
+	debug_los: bool,
 	debug_node_circle: CircleShape,
 	solvers: Vec<Solver>,
 	path_count: uint,
@@ -79,7 +80,8 @@ impl GameplayScreen  {
 			tiles: Vec::new(),
 			view: View::new().expect("Failed to create View"),
 			creatures: Vec::new(),
-			debug: false,
+			debug_graph: false,
+			debug_los: false,
 			debug_node_circle: CircleShape::new_init(debug_node_radius, 8).expect("Failed to make debug node circle"),
 			solvers: Vec::new(),
 			path_count: 0,
@@ -499,7 +501,7 @@ impl GameplayScreen  {
 						}
 						// color
 						let t = self.tiles.get_mut(idx);
-						let color = if t.visible || self.debug {
+						let color = if t.visible || self.debug_los {
 							Color::white()
 						} else {
 							Color::new_RGB(100,75,75)
@@ -701,13 +703,13 @@ impl GameplayScreen  {
 					Some(idx) => {
 						let data = self.tiles.get(idx);
 						// first draw sprites
-						if data.visible || data.seen || self.debug {
+						if data.visible || data.seen || self.debug_los {
 							for sprite in data.sprites.iter() {
 								window.draw(sprite);
 							}
 						}
 						// then maybe nodes
-						if data.is_passable() && self.debug {
+						if data.is_passable() && self.debug_graph {
 							let mut circle = self.debug_node_circle.clone().expect("Couldn't clone debug circle");
 							circle.set_position2f(
 								data.tile.x as f32 * self.tile_size as f32,
@@ -726,9 +728,9 @@ impl GameplayScreen  {
 			match hero_pos {
 				None => creature.draw(window),
 				Some(ref pos) => {
-					if self.debug || self.los(pos,&creature.get_position()) {
+					if self.debug_los || self.los(pos,&creature.get_position()) {
 						creature.draw(window);
-						if self.debug {
+						if self.debug_graph {
 							match creature.get_path() {
 								None => {}
 								Some(path) => {
@@ -873,7 +875,15 @@ impl Screen for GameplayScreen {
 		match key {
 			keyboard::Comma => {self.zoom_index -= 1;true}
 			keyboard::Period => {self.zoom_index += 1;true}
-			keyboard::BackSlash => {self.debug = !self.debug;true}
+			keyboard::G => {self.debug_graph = !self.debug_graph;true}
+			keyboard::L => {self.debug_los = !self.debug_los;true}
+			keyboard::D => {
+				let all = self.debug_los && self.debug_graph;
+				let target = !all;
+				self.debug_los = target;
+				self.debug_graph = target;
+				true
+			}
 			_ => false
 		}
 	}
