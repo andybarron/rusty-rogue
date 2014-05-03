@@ -597,14 +597,13 @@ impl GameplayScreen  {
 	}
 
 	fn resolve_all_collisions(&mut self) {
-		for i in range(0,self.creatures.len()) {
+		for i in range(0,self.creatures.len()-1) {
 
 			let bounds = self.creatures.get(i).get_bounds();
 			let active = self.get_active_tiles( &bounds );
 
 			// creature-creature collision
-			for j in range(0, self.creatures.len()) {
-				if i == j { continue; }
+			for j in range(i+1, self.creatures.len()) {
 
 				let i_box = &self.creatures.get(i).get_bounds();
 				let j_box = &self.creatures.get(j).get_bounds();
