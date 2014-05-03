@@ -2,13 +2,28 @@ use rsfml::system::Vector2f;
 use rsfml::graphics::FloatRect;
 use rsfml::graphics::RenderWindow;
 use animation::Animation;
+use util;
 
 #[deriving(Clone)]
 pub enum Facing {
-	North = 2,
-	South = 0,
-	East = 3,
-	West = 1,
+	North = 0,
+	East = 1,
+	South = 2,
+	West = 3,
+}
+
+impl Facing {
+	pub fn from_deg(degrees: f32) -> Facing {
+		match util::normalize_angle(degrees,false) {
+			45.0 .. 135.0 => South,
+			225.0 .. 315.0 => North,
+			135.0 .. 225.0 => West,
+			_ => East
+		}
+	}
+	pub fn from_rad(radians: f32) -> Facing {
+		Facing::from_deg(radians.to_degrees())
+	}
 }
 
 #[deriving(Clone)]
@@ -16,13 +31,13 @@ pub struct Creature {
 	max_health: int,
 	health: int,
 	pos: Vector2f,
-	anim: Animation,
+	pub anim: Animation,
 	pub player: bool,
 	path: Vec<(int,int)>,
 	pub path_age: f32,
 	pub path_id: Option<uint>,
 	pub awake: bool,
-	pub facing: Facing,
+	facing: Facing,
 }
 
 impl Creature {
@@ -43,19 +58,34 @@ impl Creature {
 		};
 
 		// TODO better sprite origin calculation?
-		let bounds = c.anim.get_current_sprite().get_local_bounds();
-		c.anim.set_origin2f(bounds.width/2.0,bounds.height/2.0);
-		c.update_sprite();
+		let bounds = c.anim.sprite.get_local_bounds();
+		c.anim.sprite.set_origin2f(bounds.width/2.0,bounds.height/2.0);
+		c.update_anim_pos();
+
+		c.set_facing(c.facing);
 
 		c
+	}
+
+	pub fn set_facing(&mut self, facing: Facing) {
+		self.facing = facing;
+		self.anim.set_frame_set( facing as uint );
+	}
+
+	pub fn set_facing_deg(&mut self, degrees: f32) {
+		self.set_facing(Facing::from_deg(degrees))
+	}
+
+	pub fn set_facing_rad(&mut self, radians: f32) {
+		self.set_facing(Facing::from_rad(radians))
 	}
 
 	pub fn update_anim(&mut self, delta: f32) {
 		self.anim.update(delta);
 	}
 
-	fn update_sprite(&mut self) {
-		self.anim.set_position2f( self.pos.x, self.pos.y );
+	fn update_anim_pos(&mut self) {
+		self.anim.sprite.set_position2f( self.pos.x, self.pos.y );
 	}
 
 	#[inline]
@@ -65,7 +95,7 @@ impl Creature {
 
 	// TODO make better
 	pub fn get_bounds_trimmed(&self, trim: f32) -> FloatRect {
-		let mut bounds = self.anim.get_current_sprite().get_global_bounds();
+		let mut bounds = self.anim.sprite.get_global_bounds();
 		let reduce_h = bounds.height / 2.0;
 		let reduce_w = bounds.width / 4.0;
 
@@ -91,31 +121,31 @@ impl Creature {
 	pub fn move_polar_rad(&mut self, distance: f32, radians: f32) {
 		self.pos.x += distance*radians.cos();
 		self.pos.y += distance*radians.sin();
-		self.update_sprite();
+		self.update_anim_pos();
 	}
 
 	pub fn draw(&self, window: &mut RenderWindow) {
-		window.draw(self.anim.get_current_sprite());
+		window.draw(&self.anim.sprite);
 	}
 
 	pub fn set_scale2f(&mut self, x: f32, y: f32) {
-		self.anim.set_scale2f(x,y);
+		self.anim.sprite.set_scale2f(x,y);
 	}
 
 	pub fn set_position2f(&mut self, x: f32, y: f32) {
 		self.pos.x = x;
 		self.pos.y = y;
-		self.update_sprite();
+		self.update_anim_pos();
 	}
 
 	pub fn set_position(&mut self, position: &Vector2f) {
 		self.pos = position.clone();
-		self.update_sprite();
+		self.update_anim_pos();
 	}
 
 	pub fn move(&mut self, dist: &Vector2f) {
 		self.pos = self.pos + *dist;
-		self.update_sprite();
+		self.update_anim_pos();
 	}
 
 	pub fn get_position(&self) -> Vector2f {

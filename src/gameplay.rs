@@ -24,7 +24,7 @@ use util;
 
 use collision::CollisionResolver;
 
-use entities::Creature;
+use entities::{Facing,Creature};
 use animation::Animation;
 
 use graph::Graph;
@@ -183,29 +183,35 @@ impl GameplayScreen  {
 			spr
 		};
 
-		let get_walk_cycle = |x: uint, y: uint, length: f32| -> Animation {
-			let spr_m = get_spr(x,y);
-			let spr_l = get_spr(x-1,y);
-			let spr_r = get_spr(x+1,y);
-			let mut anim = Animation::new(length);
-			anim.add_sprite(&spr_m);
-			anim.add_sprite(&spr_l);
-			anim.add_sprite(&spr_m);
-			anim.add_sprite(&spr_r);
-			anim
+		let get_walk_cycle_frames = |x: uint, y: uint| -> Vec<IntRect> {
+			vec!(
+				grab_tile_rect(x,y),
+				grab_tile_rect(x-1,y),
+				grab_tile_rect(x,y),
+				grab_tile_rect(x+1,y)
+			)
 		};
 
+		let get_walk_cycle = |x: uint, y: uint, length: f32| -> Animation {
+			let spr_m = get_spr(x,y);
+			let cycle_s = get_walk_cycle_frames(x,y);
+			let cycle_w = get_walk_cycle_frames(x,y+1);
+			let cycle_e = get_walk_cycle_frames(x,y+2);
+			let cycle_n = get_walk_cycle_frames(x,y+3);
+			let mut anim = Animation::new(&spr_m, &cycle_n, length);
+			anim.frame_sets.push(cycle_e);
+			anim.frame_sets.push(cycle_s);
+			anim.frame_sets.push(cycle_w);
+			anim
+		};
 
 		// load up player sprite
 		let coords_hero = grab_tile_rect(4,8);
 		let mut sprite_hero = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to create hero sprite");
 		sprite_hero.set_texture_rect(&coords_hero);
 
-		let mut anim_hero = Animation::new(1.0);
-		anim_hero.add_sprite(&sprite_hero);
-
 		// create player creature
-		let mut hero = Creature::new(&get_walk_cycle(4,8,0.125),10);
+		let mut hero = Creature::new(&get_walk_cycle(4,8,0.5),10);
 		let (start_x, start_y) = dungeon.start_coords;
 		hero.set_position2f( (start_x*t_sz as int) as f32, (start_y*t_sz as int) as f32 );
 		hero.player = true;
@@ -216,15 +222,13 @@ impl GameplayScreen  {
 		let coords_slime = grab_tile_rect(10,8);
 		let mut sprite_slime = Sprite::new_with_texture(rc_tex.clone()).expect("Failed to load slime sprite");
 		sprite_slime.set_texture_rect(&coords_slime);
-		let mut anim_slime = Animation::new(1.0);
-		anim_slime.add_sprite(&sprite_slime);
 
 		let monster_cycles = [
-			get_walk_cycle(10,8,0.5),
-			get_walk_cycle(10,12,0.5),
-			get_walk_cycle(7,12,0.5),
-			get_walk_cycle(4,12,0.5),
-			// get_walk_cycle(1,12,0.5), // slime
+			get_walk_cycle(10,8,1.0),
+			get_walk_cycle(10,12,1.0),
+			get_walk_cycle(7,12,1.0),
+			get_walk_cycle(4,12,1.0),
+			// get_walk_cycle(1,12,1.0), // slime
 		];
 
 		// find and create monsters
@@ -234,6 +238,8 @@ impl GameplayScreen  {
 					let idx = num % monster_cycles.len();
 					let mut slime = Creature::new(&monster_cycles[idx],5);
 					slime.set_position2f( (tile.x*t_sz as int) as f32, (tile.y*t_sz as int) as f32 );
+					slime.anim.timer = (((num % 100) as f32) / 100.0) * slime.anim.length;
+					slime.anim.update(0.0);
 					ret.creatures.push(slime);
 				}
 				_ => {}
@@ -302,9 +308,15 @@ impl GameplayScreen  {
 					_ => None
 				};
 
+				// move player
 				match angle {
 					None => { }
-					Some(deg) => { self.creatures.get_mut(hero).move_polar_deg(dist,deg); }
+					Some(deg) => {
+						let guy = self.creatures.get_mut(hero);
+						guy.move_polar_deg(dist,deg);
+						guy.set_facing( Facing::from_deg(deg) );
+						guy.update_anim(delta);
+					}
 				}
 
 				// get solutions
@@ -381,6 +393,7 @@ impl GameplayScreen  {
 						let chase_dist = 16.0 * delta;
 						let mut dist_remaining = chase_dist;
 
+						self.creatures.get_mut(i).update_anim(delta);
 						while dist_remaining > 0.0 && self.creatures.get(i).has_path() {
 							let pos_dif = wv - monster_pos;
 							let dif_len = (pos_dif.x*pos_dif.x + pos_dif.y*pos_dif.y).sqrt();
@@ -391,7 +404,9 @@ impl GameplayScreen  {
 								dist_remaining -= dif_len;
 							} else {
 								let (dx,dy) = (pos_dif.x,pos_dif.y);
-								self.creatures.get_mut(i).move_polar_rad( chase_dist, dy.atan2(&dx) );
+								let rads = dy.atan2(&dx);
+								self.creatures.get_mut(i).move_polar_rad( chase_dist, rads );
+								self.creatures.get_mut(i).set_facing_rad( rads );
 								dist_remaining = 0.0;
 							}
 						}
@@ -405,9 +420,9 @@ impl GameplayScreen  {
 		self.resolve_all_collisions();
 
 		// updates
-		for creature in self.creatures.mut_iter() {
-			creature.update_anim(delta);
-		}
+		// for creature in self.creatures.mut_iter() {
+		// 	creature.update_anim(delta);
+		// }
 
 		// set up screen view
 		self.view.set_size2f( (window.get_size().x as f32)/mag,
@@ -842,8 +857,8 @@ impl Screen for GameplayScreen {
 
 	fn key_press(&mut self, game : &mut Game, window : &mut RenderWindow, key : Key) -> bool {
 		match key {
-			keyboard::Comma => {self.zoom_index -= 1;true}
-			keyboard::Period => {self.zoom_index += 1;true}
+			keyboard::Subtract => {self.zoom_index -= 1;true}
+			keyboard::Equal => {self.zoom_index += 1;true}
 			keyboard::BackSlash => {self.debug = !self.debug;true}
 			_ => false
 		}

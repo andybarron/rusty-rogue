@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::cmp::Ord;
+use std::num::Float;
 
 static RES_LOC: &'static str = "./res/";
 static GFX_DIR: &'static str = "gfx/";
@@ -25,6 +26,41 @@ pub fn get_sprite_coords(x: uint, y: uint, tile_w: uint, tile_h: uint) -> (uint,
 	( x*tile_w, y*tile_h )
 }
 
+/* Angular math */
+
+pub fn circle(radians: bool) -> f32 {
+	if (radians) { Float::two_pi() } else { 360.0 }
+}
+
+pub fn normalize_angle(angle: f32, radians: bool) -> f32 {
+	let circle = circle(radians);
+	let mut norm = angle;
+	while norm >= circle {
+		norm -= circle;
+	}
+	while norm < 0.0 {
+		norm += circle;
+	}
+	norm
+}
+
+pub fn get_angle_diff( current: f32, target: f32 ) -> f32 {
+	let mut diff = target - current;
+
+	while diff < 0. {
+		diff += 360.;
+	}
+	while diff >= 360. {
+		diff -= 360.
+	}
+
+	if diff > 180. {
+		diff -= 360.;
+	}
+
+	diff
+}
+
 /* Random stuff */
 
 pub fn map_range_f32(n: f32, min1: f32, max1: f32, min2: f32, max2: f32, clamp_val: bool) -> f32 {
@@ -43,21 +79,4 @@ pub fn clamp<T:Ord>(x : T, min : T, max : T) -> T {
 	} else {
 		x
 	}
-}
-
-pub fn get_angle_diff( current: f32, target: f32 ) -> f32 {
-	let mut diff = target - current;
-
-	while diff < 0. {
-		diff += 360.;
-	}
-	while diff >= 360. {
-		diff -= 360.
-	}
-
-	if diff > 180. {
-		diff -= 360.;
-	}
-
-	diff
 }
