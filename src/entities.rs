@@ -3,6 +3,15 @@ use rsfml::graphics::FloatRect;
 use rsfml::graphics::RenderWindow;
 use animation::Animation;
 
+#[deriving(Clone)]
+pub enum Facing {
+	North = 2,
+	South = 0,
+	East = 3,
+	West = 1,
+}
+
+#[deriving(Clone)]
 pub struct Creature {
 	max_health: int,
 	health: int,
@@ -13,6 +22,7 @@ pub struct Creature {
 	pub path_age: f32,
 	pub path_id: Option<uint>,
 	pub awake: bool,
+	pub facing: Facing,
 }
 
 impl Creature {
@@ -29,6 +39,7 @@ impl Creature {
 			path_age: 0.0,
 			path_id: None,
 			awake: false,
+			facing: South,
 		};
 
 		// TODO better sprite origin calculation?
@@ -141,18 +152,19 @@ impl Creature {
 	
 }
 
-impl Clone for Creature {
-	fn clone(&self) -> Creature {
-		Creature {
-			max_health: self.max_health,
-			health: self.health,
-			pos: self.pos,
-			anim: self.anim.clone(),
-			player: self.player,
-			path: self.path.clone(),
-			path_age: self.path_age,
-			path_id: self.path_id.clone(),
-			awake: self.awake,
-		}
-	}
-}
+// impl Clone for Creature {
+// 	fn clone(&self) -> Creature {
+// 		Creature {
+// 			max_health: self.max_health,
+// 			health: self.health,
+// 			pos: self.pos,
+// 			anim: self.anim.clone(),
+// 			player: self.player,
+// 			path: self.path.clone(),
+// 			path_age: self.path_age,
+// 			path_id: self.path_id.clone(),
+// 			awake: self.awake,
+// 			facing: self.facing,
+// 		}
+// 	}
+// }

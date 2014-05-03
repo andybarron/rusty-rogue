@@ -1,6 +1,17 @@
 use rsfml::graphics::rc::Sprite;
 use rsfml::system::Vector2f;
 
+#[deriving(Clone)]
+pub struct AnimationSet {
+	anims: Vec<Animation>,
+}
+
+impl AnimationSet {
+	pub fn new(anim: &Animation) -> AnimationSet {
+		AnimationSet { anims: Vec::new() }
+	}
+}
+
 pub struct Animation {
 	sprites: Vec<Sprite>,
 	position: Vector2f,
@@ -42,6 +53,11 @@ impl Animation {
 			frame: 0,
 		};
 		this
+	}
+	pub fn each_sprite(&mut self, func: |&mut Sprite|) {
+		for spr in self.sprites.mut_iter() {
+			func(spr);
+		}
 	}
 	pub fn update(&mut self, delta: f32) {
 		self.timer += delta;
