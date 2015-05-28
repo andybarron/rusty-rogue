@@ -1,48 +1,49 @@
-use rsfml::system::Vector2f;
-use rsfml::graphics::FloatRect;
-use rsfml::graphics::RenderWindow;
+use sfml::system::Vector2f;
+use sfml::graphics::FloatRect;
+use sfml::graphics::{RenderTarget, RenderWindow};
 use animation::Animation;
-use util;
+use util::{self, AngleHelper};
 
-#[deriving(Clone)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Facing {
 	North = 0,
 	East = 1,
 	South = 2,
 	West = 3,
 }
+pub use self::Facing::*;
 
 impl Facing {
 	pub fn from_deg(degrees: f32) -> Facing {
 		match util::normalize_angle(degrees,false) {
-			45.0 .. 135.0 => South,
-			225.0 .. 315.0 => North,
-			135.0 .. 225.0 => West,
+			45.0 ... 135.0 => South,
+			225.0 ... 315.0 => North,
+			135.0 ... 225.0 => West,
 			_ => East
 		}
 	}
 	pub fn from_rad(radians: f32) -> Facing {
-		Facing::from_deg(radians.to_degrees())
+		Facing::from_deg(radians.to_deg())
 	}
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Creature {
-	max_health: int,
-	health: int,
+	max_health: isize,
+	health: isize,
 	pos: Vector2f,
 	pub anim: Animation,
 	pub player: bool,
-	path: Vec<(int,int)>,
+	path: Vec<(isize,isize)>,
 	pub path_age: f32,
-	pub path_id: Option<uint>,
+	pub path_id: Option<usize>,
 	pub awake: bool,
 	facing: Facing,
 }
 
 impl Creature {
 
-	pub fn new(anim: &Animation, max_health: int) -> Creature {
+	pub fn new(anim: &Animation, max_health: isize) -> Creature {
 		// TODO position sprite differently
 		let mut c = Creature {
 			max_health: max_health,
@@ -62,14 +63,15 @@ impl Creature {
 		c.anim.sprite.set_origin2f(bounds.width/2.0,bounds.height/2.0);
 		c.update_anim_pos();
 
-		c.set_facing(c.facing);
+		let f = c.facing;
+		c.set_facing(f);
 
 		c
 	}
 
 	pub fn set_facing(&mut self, facing: Facing) {
 		self.facing = facing;
-		self.anim.set_frame_set( facing as uint );
+		self.anim.set_frame_set( facing as usize );
 	}
 
 	pub fn set_facing_deg(&mut self, degrees: f32) {
@@ -115,7 +117,7 @@ impl Creature {
 	}
 
 	pub fn move_polar_deg(&mut self, distance: f32, degrees: f32) {
-		self.move_polar_rad(distance, degrees.to_radians())
+		self.move_polar_rad(distance, degrees.to_rad())
 	}
 
 	pub fn move_polar_rad(&mut self, distance: f32, radians: f32) {
@@ -143,7 +145,7 @@ impl Creature {
 		self.update_anim_pos();
 	}
 
-	pub fn move(&mut self, dist: &Vector2f) {
+	pub fn move_by(&mut self, dist: &Vector2f) {
 		self.pos = self.pos + *dist;
 		self.update_anim_pos();
 	}
@@ -157,23 +159,28 @@ impl Creature {
 	}
 
 	pub fn pop_path_node(&mut self) -> bool {
-		self.path.remove(0).is_some()
+		let mut ret = false;
+		if self.path.len() > 0 {
+			self.path.remove(0);
+			ret = true;
+		}
+		ret
 	}
 
-	pub fn set_path(&mut self, path: &Vec<(int,int)>) {
+	pub fn set_path(&mut self, path: &Vec<(isize,isize)>) {
 		self.path.clear();
 		self.path = path.clone();
 		self.path_age = 0.0;
 	}
 
-	pub fn get_target_node(&self) -> Option<(int,int)> {
+	pub fn get_target_node(&self) -> Option<(isize,isize)> {
 		match self.has_path() {
 			false => None,
-			true => Some(self.path.get(0).clone())
+			true => Some(self.path[0].clone())
 		}
 	}
 
-	pub fn get_path(&self) -> Option<Vec<(int,int)>> {
+	pub fn get_path(&self) -> Option<Vec<(isize,isize)>> {
 		match self.path.len() {
 			0 => None,
 			_ => Some(self.path.clone())

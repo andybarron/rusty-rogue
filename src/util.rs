@@ -2,6 +2,23 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::cmp::PartialOrd;
 
+pub static PI: f32 = ::std::f32::consts::PI;
+
+pub trait AngleHelper {
+	fn to_deg(self) -> Self;
+	fn to_rad(self) -> Self;
+}
+
+impl AngleHelper for f32 {
+	fn to_deg(self) -> Self {
+		self * 180. / PI
+	}
+	fn to_rad(self) -> Self {
+		self * PI / 180.
+	}
+}
+
+
 static RES_LOC: &'static str = "./res/";
 static GFX_DIR: &'static str = "gfx/";
 static SND_DIR: &'static str = "snd/";

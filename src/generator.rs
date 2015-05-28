@@ -19,7 +19,7 @@ pub enum Entity {
 	Key,
 	Missingno
 }
-use self::Entity::*;
+pub use self::Entity::*;
 
 #[derive(Clone,Copy,PartialEq,Eq)]
 pub enum TileType {
@@ -31,7 +31,7 @@ pub enum TileType {
 	StairsDown,
 	Unknown
 }
-use self::TileType::*;
+pub use self::TileType::*;
 
 #[derive(Clone)]
 pub struct Dungeon {

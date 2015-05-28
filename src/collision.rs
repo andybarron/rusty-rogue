@@ -1,5 +1,5 @@
-use rsfml::graphics::FloatRect;
-use rsfml::system::Vector2f;
+use sfml::graphics::FloatRect;
+use sfml::system::Vector2f;
 
 pub struct CollisionResolver {
 	overlap: FloatRect,

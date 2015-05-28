@@ -1,8 +1,8 @@
 use graph::{Graph,GraphNode};
-use collections::hashmap::{HashMap,HashSet};
+use std::collections::{HashMap,HashSet};
 
 pub trait SearchStrategy {
-	fn solve(&self, graph: &Graph, start: (int,int), end: (int,int)) -> Option<Vec<(int,int)>>;
+	fn solve(&self, graph: &Graph, start: (isize,isize), end: (isize,isize)) -> Option<Vec<(isize,isize)>>;
 }
 
 pub struct AStarSearch {
@@ -54,14 +54,14 @@ impl AStarSearch {
 	}
 	fn build_node_path(&self, came_from: &HashMap<GraphNode,GraphNode>, current_node: &GraphNode) -> Vec<GraphNode> {
 		if came_from.contains_key(current_node) {
-			let mut path = self.build_node_path(came_from, came_from.find(current_node).expect("SHOULD have been found"));
+			let mut path = self.build_node_path(came_from, came_from.get(current_node).expect("SHOULD have been found"));
 			path.push(current_node.clone());
 			path
 		} else {
 			vec!(current_node.clone())
 		}
 	}
-	fn build_coord_path(&self, came_from: &HashMap<GraphNode,GraphNode>, current_node: &GraphNode) -> Vec<(int,int)> {
+	fn build_coord_path(&self, came_from: &HashMap<GraphNode,GraphNode>, current_node: &GraphNode) -> Vec<(isize,isize)> {
 		let vec = self.build_node_path(came_from, current_node);
 		let mut ret = Vec::new();
 		for node in vec.iter() {
@@ -73,7 +73,7 @@ impl AStarSearch {
 
 impl SearchStrategy for AStarSearch {
 
-	fn solve(&self, graph: &Graph, start: (int,int), end: (int,int)) -> Option<Vec<(int,int)>> {
+	fn solve(&self, graph: &Graph, start: (isize,isize), end: (isize,isize)) -> Option<Vec<(isize,isize)>> {
 
 		let start_node = graph.find_node_at_tuple(start).expect("ERROR: Could not find start node :-(");
 		let end_node = graph.find_node_at_tuple(end).expect("ERROR: Could not find end node :-(");
@@ -94,7 +94,7 @@ impl SearchStrategy for AStarSearch {
 
 		// initialize f and g score maps
 		g_score.insert(start_node, 0f32);
-		f_score.insert(start_node, g_score.find(&start_node).expect("Start not in g_score") + self.h(&start_node,&end_node));
+		f_score.insert(start_node, g_score.get(&start_node).expect("Start not in g_score") + self.h(&start_node,&end_node));
 
 		//while loop until unvisited is empty
 		//ie while unvisited not empty
@@ -104,7 +104,7 @@ impl SearchStrategy for AStarSearch {
 			let mut lowest_f = None;
 			let mut lowest_node = None;
 			for node in open.iter() {
-				let current_f = f_score.find(node).expect("No expected f score for node").clone();
+				let current_f = f_score.get(node).expect("No expected f score for node").clone();
 				if lowest_f.is_none() || current_f < lowest_f.expect("THIS = NO") {
 					lowest_f = Some(current_f);
 					lowest_node = Some(node.clone());
@@ -125,14 +125,14 @@ impl SearchStrategy for AStarSearch {
 				if closed.contains(neighbor_ref) {
 					continue
 				}
-				let tentative_g = g_score.find(&current_node).expect("NO g score for cur")
+				let tentative_g = g_score.get(&current_node).expect("NO g score for cur")
 					+ current_node.distance_to(neighbor_ref);
 				// update f and g scores for unvisisted neighbors
 				if !open.contains(neighbor_ref) ||
-						tentative_g < *g_score.find(neighbor_ref).expect("NO g for neighbor") {
+						tentative_g < *g_score.get(neighbor_ref).expect("NO g for neighbor") {
 					came_from.insert(neighbor_ref.clone(), current_node);
 					g_score.insert(neighbor_ref.clone(), tentative_g);
-					f_score.insert(neighbor_ref.clone(), g_score.find(neighbor_ref).expect("NO g for neighbor")
+					f_score.insert(neighbor_ref.clone(), g_score.get(neighbor_ref).expect("NO g for neighbor")
 						+ self.h(neighbor_ref,&end_node));
 					// insert neighbor into open set
 					if !open.contains(neighbor_ref) {

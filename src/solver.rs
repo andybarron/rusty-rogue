@@ -1,24 +1,27 @@
-use std::comm::{Empty,Disconnected,Data};
+use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::TryRecvError;
+use std::sync::mpsc::TryRecvError::*;
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
-use sync::{Arc,RWLock};
+use std::sync::{Arc,RwLock};
+use std::thread;
 
 struct Problem {
-	id: uint,
-	graph: Arc<RWLock<Graph>>,
-	start: (int,int),
-	end: (int,int),
+	id: usize,
+	graph: Arc<RwLock<Graph>>,
+	start: (isize,isize),
+	end: (isize,isize),
 }
 
 pub struct Solution {
-	pub id: uint,
-	pub path: Option<Vec<(int,int)>>,
+	pub id: usize,
+	pub path: Option<Vec<(isize,isize)>>,
 }
 
 pub struct Solver {
 	prob_send: Sender<Problem>,
 	soln_recv: Receiver<Solution>,
-	count: uint,
+	count: usize,
 }
 
 impl Solver {
@@ -26,19 +29,20 @@ impl Solver {
 		let (prob_send,prob_recv) = channel::<Problem>();
 		let (soln_send,soln_recv) = channel();
 
-		spawn(proc(){
+		thread::spawn(move || {
 			let prob_recv = prob_recv;
 			let soln_send = soln_send;
 			let search = AStarSearch::new_diagonal();
 			loop {
-				match prob_recv.recv_opt() {
-					None => {
-						break;
-					}
-					Some(problem) => {
+				match prob_recv.try_recv() {
+					Ok(problem) => {
 						let id = problem.id;
-						let path = search.solve(&*problem.graph.read(),problem.start,problem.end);
+						let path = search.solve(&*problem.graph.read().ok().expect("threading sucks"),problem.start,problem.end);
 						soln_send.send( Solution { id: id, path: path } );
+					}
+					Err(e) => match e {
+						Empty => continue,
+						Disconnected => panic!("ERROR: Solver receiver disconnected"),
 					}
 				}
 			}
@@ -50,7 +54,7 @@ impl Solver {
 			count: 0,
 		}
 	}
-	pub fn queue_solve(&mut self, id: uint, graph: Arc<RWLock<Graph>>, start: (int,int), end: (int,int)) {
+	pub fn queue_solve(&mut self, id: usize, graph: Arc<RwLock<Graph>>, start: (isize,isize), end: (isize,isize)) {
 		let p = Problem{
 			id: id,
 			graph: graph,
@@ -62,15 +66,17 @@ impl Solver {
 	}
 	pub fn poll(&mut self) -> Option<Solution> {
 		match self.soln_recv.try_recv() {
-			Empty => None,
-			Disconnected => fail!("ERROR: Solver task killed prematurely"),
-			Data(soln) => {
+			Ok(soln) => {
 				self.count -= 1;
 				Some(soln)
 			}
+			Err(e) => match e {
+				Empty => None,
+				Disconnected => panic!("ERROR: Solver task killed prematurely"),
+			}
 		}
 	}
-	pub fn get_problem_count(&self) -> uint {
+	pub fn get_problem_count(&self) -> usize {
 		self.count
 	}
 }

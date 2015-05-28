@@ -1,18 +1,18 @@
-use rsfml::graphics::{RenderWindow};
-use rsfml::window::{VideoMode, ContextSettings, DefaultStyle, event};
-use rsfml::window::keyboard::Key;
-use rsfml::window::event::Event;
-use rsfml::system::{Clock, Time, sleep, Vector2f};
-use rsfml::graphics::{Color,VertexArray,Lines};
+use sfml::graphics::{RenderWindow, RenderTarget};
+use sfml::window::{VideoMode, ContextSettings, DefaultStyle, event};
+use sfml::window::keyboard::Key;
+use sfml::window::event::Event;
+use sfml::system::{Clock, Time, sleep, Vector2f};
+use sfml::graphics::{Color,VertexArray,Lines};
 
-use rsfml::audio::SoundBuffer;
-use rsfml::audio::rc::Sound;
-use rsfml::audio::Music;
-use rsfml::audio;
+use sfml::audio::SoundBuffer;
+use sfml::audio::rc::Sound;
+use sfml::audio::Music;
+use sfml::audio;
 
 use util::get_rc_resource;
 
-pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
+pub fn launch<T: Screen>(screen: T, title: &str, w: u32, h: u32) {
 
 	// init window
 	let setting: ContextSettings = ContextSettings::default();
@@ -25,11 +25,11 @@ pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 	let mut game = Game::new();
 
 	// grab screen
-	let mut s = screen;
+	let mut s: Box<Screen> = Box::new(screen);
 	s.init(&mut game, &mut window);
 
 	// init sound idx remover
-	let mut removed: Vec<uint> = Vec::new();
+	let mut removed: Vec<usize> = Vec::new();
 
 	// init timer
 	let mut t = Timer::new();
@@ -70,8 +70,8 @@ pub fn launch(screen: ~Screen, title: &str, w: uint, h: uint) {
 		window.display();
 
 		// clean up sounds playing
-		for i in range ( 0 , game.sounds.len() ) {
-			match game.sounds.get(i).get_status() {
+		for i in 0..game.sounds.len() {
+			match game.sounds[i].get_status() {
 				audio::Stopped => {
 					removed.push(i);
 				}
@@ -130,12 +130,16 @@ impl Game {
 
 	pub fn draw_line(&mut self, window: &mut RenderWindow, start: &Vector2f, end: &Vector2f, color: &Color) {
 		self.va.resize(2);
-		let a = self.va.get_vertex(0);
-		let b = self.va.get_vertex(1);
-		a.position = *start;
-		b.position = *end;
-		a.color = *color;
-		b.color = *color;
+		{
+			let a = self.va.get_vertex(0);
+			a.position = *start;
+			a.color = *color;
+		}
+		{
+			let b = self.va.get_vertex(1);
+			b.position = *end;
+			b.color = *color;
+		}
 		self.va.set_primitive_type(Lines);
 		window.draw(&self.va);
 	}
@@ -167,7 +171,7 @@ impl Game {
 
 pub trait Screen {
 	fn init(&mut self, game: &mut Game, window: &mut RenderWindow) { /* empty by default */ }
-	fn update(&mut self, game: &mut Game, window: &mut RenderWindow, delta: f32) -> Option<~Screen>;
+	fn update(&mut self, game: &mut Game, window: &mut RenderWindow, delta: f32) -> Option<Box<Screen>>;
 	fn event(&mut self, game: &mut Game, window: &mut RenderWindow, event: Event) -> bool { false }
 	fn key_press(&mut self, game: &mut Game, window: &mut RenderWindow, key: Key) -> bool { false }
 	fn key_release(&mut self, game: &mut Game, window: &mut RenderWindow, key: Key) -> bool { false }
@@ -183,6 +187,10 @@ pub struct Timer {
 	pub max_delta: Time
 }
 
+fn sleep_sec(amt: f32) {
+	return sleep(Time::with_seconds(amt))
+}
+
 impl Timer {
 
 	pub fn new() -> Timer {
@@ -194,14 +202,16 @@ impl Timer {
 	}
 
 	pub fn get_delta(&mut self) -> f32 {
-		let time_diff = self.clock.restart();
-		if time_diff < self.min_delta {
-			sleep( self.min_delta - time_diff );
-			self.min_delta
-		} else if time_diff > self.max_delta {
-			self.max_delta
+		let min_d = self.min_delta.as_seconds();
+		let max_d = self.max_delta.as_seconds();
+		let time_diff = self.clock.restart().as_seconds();
+		if time_diff < min_d {
+			sleep_sec( min_d - time_diff );
+			min_d
+		} else if time_diff > max_d {
+			max_d
 		} else {
 			time_diff
-		}.as_seconds()
+		}
 	}
 }
