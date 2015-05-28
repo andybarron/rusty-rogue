@@ -11,11 +11,11 @@ Rusty Rogue is a (prototype) procedurally generated, real-time action roguelike 
 
 ## Requirements
 
-* [Rust](http://www.rust-lang.org/), a new totally awesome systems programming language. This project is currently using Rust 1.0 stable.
+* [Rust](http://www.rust-lang.org/), a new and totally awesome systems programming language. This project is currently using Rust 1.0 stable.
 * [Cargo](http://doc.crates.io/), Rust's wonderful package manager. May or may not be included with your Rust install.
 * [SFML](http://www.sfml-dev.org/) version 2.2, a cross-platform multimedia library. Make sure to install the right version!
 * [CSFML](http://www.sfml-dev.org/download/csfml/) version 2.2. C bindings for SFML.
-* The Rust library will be automatically downloaded and compiled by Cargo. (See `Cargo.toml` for the list.)
+* All Rust libraries will be automatically downloaded and compiled by Cargo. (See `Cargo.toml` for the list.)
 
 ## Instructions
 
