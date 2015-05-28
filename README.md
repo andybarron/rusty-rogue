@@ -23,7 +23,11 @@ To compile: `cargo build`
 
 To run: `cargo run`
 
-Arrow keys to move, `A` to toggle debug view (line-of-sight/pathfinding)
+### Controls
+* Move: arrow keys
+* Toggle line-of-sight debug view: `L`
+* Toggle pathfinding debug view : `G`
+* Toggle all debug info: `D`
 
 
 ## Resources
