@@ -1,12 +1,11 @@
-// gen_test.rs
 extern crate rand;
 
 use std::io::{stdin,Read,BufReader,BufRead};
 use generator::generate_default;
 use std::str::FromStr;
 
-mod util;
-mod generator;
+use util;
+use generator;
 
 fn uint_from_reader<T: Read>(reader: &mut BufReader<T>) -> Option<usize> {
 	let mut buf = String::new();
@@ -15,7 +14,7 @@ fn uint_from_reader<T: Read>(reader: &mut BufReader<T>) -> Option<usize> {
 	opt.ok()
 }
 
-fn main() {
+pub fn main() {
 
 	let mut reader = BufReader::new(stdin());
 

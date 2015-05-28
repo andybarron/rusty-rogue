@@ -1,23 +1,22 @@
-extern crate collections;
 extern crate rand;
 
 use graph::Graph;
 use search::{SearchStrategy,AStarSearch};
-use collections::hashmap::HashSet;
-use rand::{Rng,task_rng};
+use std::collections::HashSet;
+use rand::{Rng,thread_rng};
 
-mod graph;
-mod search;
+use graph;
+use search;
 
-fn print_graph(graph: &Graph, w: int, h: int, path: Option<Vec<(int,int)>>) {
-	for y in range(0,h) {
-		for x in range(0,w) {
+fn print_graph(graph: &Graph, w: isize, h: isize, path: Option<Vec<(isize,isize)>>) {
+	for y in (0)..(h) {
+		for x in (0)..(w) {
 			let ch = match graph.find_node_at(x,y) {
-				None => ' ',
+				None => '.',
 				Some(node) => match path {
-					None => '-',
+					None => ' ',
 					Some(ref vec) => match vec.contains( &(node.get_x(),node.get_y()) ) {
-						false => '-',
+						false => ' ',
 						true => 'X'
 					}
 				}
@@ -28,7 +27,7 @@ fn print_graph(graph: &Graph, w: int, h: int, path: Option<Vec<(int,int)>>) {
 	}
 }
 
-fn main() {
+pub fn main() {
 
 	let mut graph = Graph::new();
 	let w = 80;
@@ -41,8 +40,8 @@ fn main() {
 	let mut obstacles = HashSet::new();
 	while obstacles.len() < obstacle_count {
 		let ob = (
-			task_rng().gen_range(0,w),
-			task_rng().gen_range(0,h)
+			thread_rng().gen_range(0,w),
+			thread_rng().gen_range(0,h)
 		);
 		if ob != start && ob != end {
 			obstacles.insert(ob);
@@ -51,8 +50,8 @@ fn main() {
 
 
 	// add nodes
-	for y in range(0,h) {
-		for x in range(0,w) {
+	for y in (0)..(h) {
+		for x in (0)..(w) {
 			let coords = (x,y);
 			match obstacles.contains(&coords) {
 				true => continue,
@@ -64,8 +63,8 @@ fn main() {
 	}
 
 	// connect nodes
-	for y in range (0,h-1) {
-		for x in range (0,w-1) {
+	for y in (0)..(h-1) {
+		for x in (0)..(w-1) {
 			match graph.find_node_at(x,y) {
 				Some(node) => {
 					// right
@@ -94,7 +93,8 @@ fn main() {
 	let search = AStarSearch::new_diagonal();
 	match search.solve(&graph,start,end) {
 		Some(soln) => {
-			println!("Solution: {}",soln);
+			// println!("Solution: {:?}",soln);
+			println!("\nSolution:");
 			print_graph(&graph,w,h,Some(soln));
 		}
 		None => println!("No solution found :(")

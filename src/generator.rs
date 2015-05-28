@@ -150,51 +150,19 @@ impl Dungeon {
 
 }
 
-impl DungeonParams {
-	pub fn default() -> DungeonParams {
+impl Default for DungeonParams {
+	fn default() -> Self {
 		DungeonParams {
-			room_count: 50,
-			room_size_min: 3,
-			room_size_max: 7,
+			room_count: 25,
+			room_size_min: 5,
+			room_size_max: 12,
 			hall_width_min: 1,
 			hall_width_max: 1,
-			hall_length_min: 2,
-			hall_length_max: 10,
+			hall_length_min: 3,
+			hall_length_max: 12,
 			room_monsters_max: 10,
 			hall_monsters_max: 2,
 			hall_chance: 0.25,
-			map_width: 200,
-			map_height: 200
-		}
-	}
-	pub fn small() -> DungeonParams {
-		DungeonParams {
-			room_count: 10,
-			room_size_min: 5,
-			room_size_max: 10,
-			hall_width_min: 1,
-			hall_width_max: 2,
-			hall_length_min: 2,
-			hall_length_max: 5,
-			room_monsters_max: 8,
-			hall_monsters_max: 1,
-			hall_chance: 0.15,
-			map_width: 200,
-			map_height: 200
-		}
-	}
-	pub fn huge() -> DungeonParams {
-		DungeonParams {
-			room_count: 100,
-			room_size_min: 3,
-			room_size_max: 10,
-			hall_width_min: 1,
-			hall_width_max: 3,
-			hall_length_min: 3,
-			hall_length_max: 15,
-			room_monsters_max: 30,
-			hall_monsters_max: 5,
-			hall_chance: 0.33,
 			map_width: 250,
 			map_height: 250
 		}

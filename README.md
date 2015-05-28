@@ -21,7 +21,11 @@ Rusty Rogue is a (prototype) procedurally generated, real-time action roguelike 
 
 To compile: `cargo build`
 
-To run: `cargo run`
+To run the game: `cargo run`
+
+To run the dungeon generation test: `cargo run -- --test-gen`
+
+To run the pathfinding test: `cargo run -- --test-search`
 
 ### Controls
 * Move: arrow keys
