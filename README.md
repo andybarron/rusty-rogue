@@ -1,30 +1,29 @@
 # Rusty Rogue
-
+_(Name subject to change)_
 
 ## Overview
 
-Rusty Rogue is a (prototype) procedurally generated, real-time action roguelike written in the [Rust programming language](http://www.rust-lang.org) for UVA's [CS 4414 Operating Systems](http://www.rust-class.org) course. The game is a proof-of-concept for Rust's concurrency and game development capabilities. The main features are:
+Rusty Rogue is a (prototype) procedurally generated, real-time action roguelike written in the [Rust programming language](http://www.rust-lang.org). It was originally built as a course project for the Spring 2014 section of UVA's [CS 4414 Operating Systems](http://www.rust-class.org) class. The game is a proof-of-concept for Rust's concurrency and game development capabilities. The main features are:
 
 * __Deterministic procedural generation__
 * __Two-dimensional graphics__
 * __Concurrent graph search using A*__
 
+## Requirements
+
+* [Rust](http://www.rust-lang.org/), a new totally awesome systems programming language. This project is currently using Rust 1.0 stable.
+* [Cargo](http://doc.crates.io/), Rust's wonderful package manager. May or may not be included with your Rust install.
+* [SFML](http://www.sfml-dev.org/) version 2.2, a cross-platform multimedia library. Make sure to install the right version!
+* [CSFML](http://www.sfml-dev.org/download/csfml/) version 2.2. C bindings for SFML.
+* The Rust library will be automatically downloaded and compiled by Cargo. (See `Cargo.toml` for the list.)
 
 ## Instructions
 
-A Makefile is provided, so use `make` to compile, or `make run` to compile and launch.
+__This project is currently undergoing major refactoring. At present, only the dungeon generation test will be compiled/run.__
 
-While running the game, use the arrow keys to navigate the dungeon. The G and L keys toggle debug visualizations for the navigation graph and line of sight, respectively; the D key toggles all debug visualizations.
+To compile: `cargo build`
 
-To try an interactive command-line test of the dungeon generator, run `make run MAINFILE=gen_test.rs`.
-
-To try a randomized command-line test of A* search, run `make run MAINFILE=search_test.rs`.
-
-
-## Requirements
-
-* [Rust](http://www.rust-lang.org/), a new and lightweight systems programming language. This project is currently using Rust 0.11-pre, but might soon be ported to the master branch of [Rust's Git repository](https://github.com/mozilla/rust), or to a stable distribution.
-* [Rust SFML](http://rust-sfml.org/), a fantastic Rust binding of the popular [SFML](http://www.sfml-dev.org/). This should be compiled to a .rlib file, which should be placed in the lib/rsfml folder. A Mac OS 10.9 version is included, but any other platforms will require you to compile Rust SFML yourself. Sorry!
+To run: `cargo run`
 
 
 ## Resources

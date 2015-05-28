@@ -1,25 +1,27 @@
-use std::num::pow;
+// TODO this is ugly as sin... refactor!
+
 use std::vec::Vec;
 use rand::{Rng,XorShiftRng,SeedableRng};
 use util::map_range_f32;
 
-#[deriving(Clone)]
+#[derive(Clone,Copy)]
 pub struct Tile {
-	pub x: int,
-	pub y: int,
+	pub x: isize,
+	pub y: isize,
 	pub t: TileType,
 	pub e: Option<Entity>
 }
 
-#[deriving(Clone)]
+#[derive(Clone,Copy)]
 pub enum Entity {
-	Monster(uint),
+	Monster(usize),
 	Treasure,
 	Key,
 	Missingno
 }
+use self::Entity::*;
 
-#[deriving(Clone,Eq)]
+#[derive(Clone,Copy,PartialEq,Eq)]
 pub enum TileType {
 	Floor,
 	Wall,
@@ -29,31 +31,32 @@ pub enum TileType {
 	StairsDown,
 	Unknown
 }
+use self::TileType::*;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Dungeon {
-	pub width: int,
-	pub height: int,
+	pub width: isize,
+	pub height: isize,
 	pub tiles: Vec<Tile>,
-	path_length: int,
-	pub start_coords: (int,int),
-	pub end_coords: (int,int),
+	path_length: usize,
+	pub start_coords: (isize,isize),
+	pub end_coords: (isize,isize),
 }
 
-#[deriving(Clone)]
+#[derive(Clone,Copy)]
 pub struct DungeonParams {
-	room_count: int,
-	room_size_min: int,
-	room_size_max: int,
-	hall_width_min: int,
-	hall_width_max: int,
-	hall_length_min: int,
-	hall_length_max: int,
-	room_monsters_max: int,
-	hall_monsters_max: int,
+	room_count: isize,
+	room_size_min: isize,
+	room_size_max: isize,
+	hall_width_min: isize,
+	hall_width_max: isize,
+	hall_length_min: isize,
+	hall_length_max: isize,
+	room_monsters_max: isize,
+	hall_monsters_max: isize,
 	hall_chance: f32,
-	map_width: int,
-	map_height: int
+	map_width: isize,
+	map_height: isize
 }
 
 /********************/
@@ -62,41 +65,42 @@ pub struct DungeonParams {
 
 impl Dungeon {
 
-	pub fn empty(w: int, h: int) -> Dungeon {
+	pub fn empty(w: isize, h: isize) -> Dungeon {
 		Dungeon {
 			width: w,
 			height: h,
-			tiles: Vec::from_fn( (w*h) as uint, |i| {
-				let i = i as int;
-				let x: int = i % w;
-				let y: int = i / w;
-				Tile { x: x, y: y, t: Wall, e: None }
-			}),
+			tiles: ( 0..((w*h) as usize) )
+				.map(|i: usize| {
+					let i = i as isize;
+					let x: isize = i % w;
+					let y: isize = i / w;
+					Tile { x: x, y: y, t: Wall, e: None }
+				}).collect(),
 			path_length: 0,
 			start_coords: (0,0),
 			end_coords: (0,0),
 		}
 	}
 
-	pub fn get_tile<'a>(&'a self, x: int, y: int) -> Option<&'a Tile> {
+	pub fn get_tile<'a>(&'a self, x: isize, y: isize) -> Option<&'a Tile> {
 
 		let idx = x+y*self.width;
 
-		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as int {
+		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as isize {
 			None
 		} else {
-			Some(self.tiles.get(idx as uint))
+			Some(&self.tiles[idx as usize])
 		}
 
 	}
 
-	pub fn get_tile_type(&self, x: int, y: int) -> Option<TileType> {
+	pub fn get_tile_type(&self, x: isize, y: isize) -> Option<TileType> {
 		let idx = x+y*self.width;
 
-		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as int {
+		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as isize {
 			None
 		} else {
-			Some(self.tiles.get(idx as uint).t)
+			Some(self.tiles[idx as usize].t.clone())
 		}
 	}
 
@@ -106,11 +110,11 @@ impl Dungeon {
 
 	pub fn print(&self) {
 		let dungeon = self;
-		for y in range(0,dungeon.height) {
-			for x in range(0,dungeon.width) {
+		for y in 0..dungeon.height {
+			for x in 0..dungeon.width {
 				let t: char = match dungeon.get_tile(x,y) {
 					None => '?',
-					Some(tile) => match tile.e {
+					Some(tile) => match tile.e.clone() {
 						Some(ent) => match ent {
 							Monster(_) => 'M',
 							Treasure => 'T',
@@ -136,11 +140,11 @@ impl Dungeon {
 		println!("Path length: {}",dungeon.path_length);
 	}
 
-	pub fn width(&self) -> int {
+	pub fn width(&self) -> isize {
 		self.width
 	}
 
-	pub fn height(&self) -> int {
+	pub fn height(&self) -> isize {
 		self.height
 	}
 
@@ -213,11 +217,11 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 	let mut d = Dungeon::empty(params.map_width,params.map_height);
 
 	let mut rooms: Vec<Room> = Vec::new();
-	let mut actual_rooms: uint = 0;
+	let mut actual_rooms: usize = 0;
 
-	let mut neighbors: Vec<Vec<int>> = Vec::new();
+	let mut neighbors: Vec<Vec<usize>> = Vec::new();
 
-	while actual_rooms < params.room_count as uint {
+	while actual_rooms < params.room_count as usize {
 
 		// don't start with a hall
 		let is_first = rooms.len() == 0;
@@ -228,8 +232,8 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 		let mut y;
 		let mut w;
 		let mut h;
-		let mut c_x: Option<int> = None;
-		let mut c_y: Option<int> = None;
+		let mut c_x: Option<isize> = None;
+		let mut c_y: Option<isize> = None;
 		let mut add_door = true;
 
 		// are we adding
@@ -254,8 +258,9 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 			x = rng.gen_range(1, d.width - 1 - w);
 			y = rng.gen_range(1, d.height - 1 - h);
 		} else {
-			exist_idx = rng.gen_range(0,rooms.len() as int);
-			let existing = rooms.get(exist_idx as uint);
+			exist_idx = rng.gen_range(0,rooms.len() as isize);
+			let existing = rooms.get(exist_idx as usize)
+					.expect("nooooooo");
 
 			// TODO is this necessary?
 			// don't directly connect rooms
@@ -270,27 +275,27 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 
 			// pick cardinal direction to attch room
 			let direction = rng.gen_range(0,4);
-			// pick x point
+			// pick x poisize
 			let connect_x = match direction {
 				0|2 => rng.gen_range(existing.x,existing.x+existing.w),
 				1|3 => match rng.gen_range(0,2) {
 					0 => existing.x-1,
 					1 => existing.x + existing.w,
-					_ => fail!("A")
+					_ => panic!("A")
 				},
-				_ => fail!("B")
+				_ => panic!("B")
 			};
-			// pick y point
+			// pick y poisize
 			let connect_y = match direction {
 				1|3 => rng.gen_range(existing.y,existing.y+existing.h),
 				0|2 => match rng.gen_range(0,2) {
 					0 => existing.y-1,
 					1 => existing.y + existing.h,
-					_ => fail!("C")
+					_ => panic!("C")
 				},
-				_ => fail!("D")
+				_ => panic!("D")
 			};
-			// now that we have a connector point,
+			// now that we have a connector poisize,
 			// figure out where we want to put the new room
 			x = match direction {
 				// we must ADD ONE in this range because
@@ -299,14 +304,14 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 				0|2 => rng.gen_range(connect_x-(w-1),connect_x+1),
 				1 => connect_x+1,
 				3 => connect_x-w,
-				_ => fail!("E")
+				_ => panic!("E")
 			};
 			y = match direction {
 				// same as above
 				1|3 => rng.gen_range(connect_y-(h-1),connect_y+1),
 				2 => connect_y+1,
 				0 => connect_y-h,
-				_ => fail!("F")
+				_ => panic!("F")
 			};
 			c_x = Some(connect_x);
 			c_y = Some(connect_y);
@@ -334,60 +339,61 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 			neighbors.push(Vec::new());
 			if exist_idx != -1 {
 				let new_idx = rooms.len()-1;
-				neighbors.get_mut(exist_idx as uint).push(new_idx as int);
-				neighbors.get_mut(new_idx).push(exist_idx as int);
+				neighbors[exist_idx as usize].push(new_idx as usize);
+				neighbors[new_idx].push(exist_idx as usize);
 			}
 		} // else try again :-(
 	}
 
 
 	// let's do this differently
-	let mut start_idx_opt = None;
+	let mut start_idx_opt: Option<usize> = None;
 
-	while start_idx_opt.is_none() || rooms.get(start_idx_opt.expect("Shouldn't be here lawl")).hall {
-		start_idx_opt = Some( rng.gen_range(0, rooms.len() as int) as uint );
+	while start_idx_opt.is_none() || rooms[ start_idx_opt.expect("Shouldn't be here lawl") ].hall {
+		start_idx_opt = Some( rng.gen_range(0, rooms.len() as isize) as usize );
 	}
 
 	let start_idx = start_idx_opt.expect("Okay cool good wut");
 
-	let mut distances: Vec<Option<int>> = Vec::new();
-	for _ in range(0,rooms.len()) { distances.push(None) }
-	let mut queue: Vec<uint> = Vec::new();
-	*distances.get_mut(start_idx) = Some(0);
+	let mut distances: Vec<Option<usize>> = Vec::new();
+	for _ in 0..rooms.len() { distances.push(None) }
+	let mut queue: Vec<usize> = Vec::new();
+	distances[start_idx] = Some(0);
 	queue.push(start_idx);
 
-	let mut visited_idx: Vec<int> = Vec::new();
+	let mut visited_idx: Vec<usize> = Vec::new();
 
 	while queue.len() > 0 {
-		let current_idx = queue.remove(0).expect("Queue shouldn't be empty");
-		let current_dist = distances.get(current_idx).expect("Distance should be set");
-		let adjacent = neighbors.get(current_idx);
+		let current_idx = queue.remove(0);
+		let current_dist = distances[current_idx].expect("Distance should be set");
+		let adjacent = neighbors.get(current_idx).expect("mr skeltal");
 		for neighbor in adjacent.iter() {
 
 			if visited_idx.contains( neighbor ) { continue; }
 
-			let old_dist = distances.get(neighbor.clone() as uint).clone();
+			let old_dist = distances[neighbor.clone() as usize].clone();
 			let new_dist = current_dist + 1;
 			if old_dist.is_none() || old_dist.expect("wat") > new_dist {
-				*distances.get_mut(neighbor.clone() as uint) = Some(new_dist);
+				distances[neighbor.clone() as usize] = Some(new_dist);
 			}
-			queue.push(neighbor.clone() as uint);
+			queue.push(neighbor.clone() as usize);
 		}
 
-		visited_idx.push(current_idx as int);
+		visited_idx.push(current_idx);
 	}
 
-	// for i in range(0,distances.len()) {
+	// for i in 0..distances.len() {
 	// 	println!("{}->{}",i,distances.get(i).expect("Distance not set?!"));
 	// }
 
 	// find room with furthest distance
-	let mut furthest_idx: Option<uint> = None;
-	let mut furthest_dist: Option<int> = None;
-	for i in range(0,rooms.len()) {
-		let room = rooms.get(i);
+	let mut furthest_idx: Option<usize> = None;
+	let mut furthest_dist: Option<usize> = None;
+	for i in 0..rooms.len() {
+		let room = rooms[i].clone();
 		if room.hall { continue; }
-		let dist = distances.get(i).clone().expect("Distance somehow isn't set");
+		let dist: usize = distances[i]
+				.expect("Distance somehow isn't set");
 		if furthest_dist.is_none() || furthest_dist.expect("O_o") < dist {
 			furthest_dist = Some(dist);
 			furthest_idx = Some(i);
@@ -396,11 +402,12 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 
 	// println!("Furthest room is room {} with distance {}",furthest_idx.unwrap(),furthest_dist.unwrap());
 
-	let end = rooms.get_mut(furthest_idx.expect("Furthest index not set")).clone();
+	let end = rooms.get_mut(furthest_idx.expect("Furthest index not set"))
+			.expect("pls no").clone();
 	d.path_length = furthest_dist.expect("Srsly wat");
 
 	// put up stairs in start
-	let start_room: &Room = rooms.get(start_idx);
+	let start_room: &Room = rooms.get(start_idx).expect("uuugh");
 	let end_room: &Room = &end;
 
 	//println!("Start room: {},{}",start_room.x,start_room.y);
@@ -425,13 +432,13 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 	d.end_coords = (end_x,end_y);
 
 	if !set_start || !set_end {
-		fail!("Failed to set start/end ({}/{})",set_start,set_end);
+		panic!("Failed to set start/end ({}/{})",set_start,set_end);
 	}
 
 	// now let's add some enemies
 	let mut total_monsters = 0;
-	let min_room_area = pow(params.room_size_min as f32, 2);
-	let max_room_area = pow(params.room_size_max as f32, 2);
+	let min_room_area = f32::powf(params.room_size_min as f32, 2.);
+	let max_room_area = f32::powf(params.room_size_max as f32, 2.);
 	let min_hall_area = (params.hall_width_min*params.hall_length_min) as f32;
 	let max_hall_area = (params.hall_width_max*params.hall_length_max) as f32;
 	for room in rooms.iter() {
@@ -444,7 +451,7 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 		};
 
 		let max_possible = if room.hall { params.hall_monsters_max } else { params.room_monsters_max } as f32;
-		let max_monsters = map_range_f32( area, min_area, max_area, 0.0, max_possible, true ).round() as int;
+		let max_monsters = map_range_f32( area, min_area, max_area, 0.0, max_possible, true ).round() as isize;
 		let monster_count = rng.gen_range(0, max_monsters + 1);
 		total_monsters += monster_count;
 
@@ -462,16 +469,6 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 			}
 		}
 	}
-
-	// println!("{} total monsters", total_monsters);
-
-	// ALL POSITIONS ARE INVALID
-	// AFTER SHRINKING!!!
-	// heeerrrppp dddeeerrrpppp
-	// d.shrink();
-
-	// TODO do we actually want to shrink?
-
 	d
 }
 
@@ -482,10 +479,11 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 impl Dungeon {
 
 	fn fix_coords(&mut self) {
-		for y in range(0,self.height) {
-			for x in range(0,self.width) {
+		for y in 0..self.height {
+			for x in 0..self.width {
 				let idx = x + y*self.width;
-				let tile = self.tiles.get_mut(idx as uint);
+				let tile = self.tiles.get_mut(idx as usize)
+						.expect("Just ... no");
 				tile.x = x;
 				tile.y = y;
 				match tile.t {
@@ -498,25 +496,26 @@ impl Dungeon {
 	}
 
 	pub fn shrink(&mut self) {
-		let d = self;
-		while d.shrink_h(1,0) {
-			// println!("Removed a left column");
+		loop {
+			if !self.shrink_h(1,0) { break; }
 		}
-		while d.shrink_h(d.width-2,d.width-1) {
-			// println!("Removed a right column");
+		loop {
+			let w = self.width;
+			if !self.shrink_h(w-2,w-1) { break; }
 		}
-		while d.shrink_v(1,0) {
-			// println!("Removed a top row");
+		loop {
+			if !self.shrink_v(1,0) { break; }
 		}
-		while d.shrink_v(d.height-2,d.height-1) {
-			// println!("Removed a bottom row");
+		loop {
+			let h = self.height;
+			if !self.shrink_v(h-2,h-1) { break; }
 		}
-		d.fix_coords();
+		self.fix_coords();
 	}
 
-	fn shrink_h(&mut self, x_check: int, x_remove: int) -> bool {
+	fn shrink_h(&mut self, x_check: isize, x_remove: isize) -> bool {
 
-		for y in range(0,self.height)
+		for y in 0..self.height
 		{
 			match self.get_tile(x_check,y) {
 				None => return false,
@@ -527,18 +526,18 @@ impl Dungeon {
 			}
 		}
 
-		for y in range(0,self.height) {
+		for y in 0..self.height {
 			let z = self.height - y - 1;
 			let idx = z*self.width+x_remove;
-			self.tiles.remove(idx as uint);
+			self.tiles.remove(idx as usize);
 		}
 		self.width -= 1;
 		true
 	}
 
-	fn shrink_v(&mut self, y_check: int, y_remove: int) -> bool {
+	fn shrink_v(&mut self, y_check: isize, y_remove: isize) -> bool {
 
-		for x in range(0,self.width)
+		for x in 0..self.width
 		{
 			match self.get_tile(x,y_check) {
 				None => return false,
@@ -549,45 +548,45 @@ impl Dungeon {
 			}
 		}
 
-		for x in range(0,self.width) {
+		for x in 0..self.width {
 			let x2 = self.width - x - 1;
 			let idx = y_remove*self.width+x2;
-			self.tiles.remove(idx as uint);
+			self.tiles.remove(idx as usize);
 		}
 		self.height -= 1;
 		true
 	}
 
-	fn get_tile_mut<'a>(&'a mut self, x: int, y: int) -> Option<&'a mut Tile> {
+	fn get_tile_mut<'a>(&'a mut self, x: isize, y: isize) -> Option<&'a mut Tile> {
 
 		let idx = x+y*self.width;
 
-		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as int {
+		if x >= self.width || y >= self.height || x < 0 || y < 0 || idx < 0 || idx >= self.tiles.len() as isize {
 			None
 		} else {
-			Some(self.tiles.get_mut(idx as uint))
+			self.tiles.get_mut(idx as usize)
 		}
 
 	}
 
-	fn set_tile<'a>(&'a mut self, x: int, y: int, t: TileType) -> bool {
+	fn set_tile<'a>(&'a mut self, x: isize, y: isize, t: TileType) -> bool {
 		match self.get_tile_mut(x,y) {
 			None => false,
 			Some(tile) => { tile.t = t; true }
 		}
 	}
 
-	fn fill_tiles<'a>(&'a mut self, x: int, y: int, w: int, h: int, t: TileType) -> bool {
-		for y in range (y, y+h) {
-			for x in range(x, x+w) {
+	fn fill_tiles<'a>(&'a mut self, x: isize, y: isize, w: isize, h: isize, t: TileType) -> bool {
+		for y in y..(y+h) {
+			for x in x..(x+w) {
 				match self.get_tile_mut(x,y) {
 					None => return false,
 					Some(_) => {}
 				}
 			}
 		}
-		for y in range (y, y+h) {
-			for x in range(x, x+w) {
+		for y in y..(y+h) {
+			for x in x..(x+w) {
 				self.set_tile(x,y,t);
 			}
 		}
@@ -602,11 +601,11 @@ impl Dungeon {
 		}
 	}
 
-	fn is_room_position_valid(&self, x: int, y: int, w: int, h: int) -> bool {
+	fn is_room_position_valid(&self, x: isize, y: isize, w: isize, h: isize) -> bool {
 		if x == 0 || y == 0 || w == 0 || h == 0 { return false; }
 
-		for y in range (y-1, y+h+1) {
-			for x in range (x-1, x+w+1) {
+		for y in (y-1)..(y+h+1) {
+			for x in (x-1)..(x+w+1) {
 				match self.get_tile(x,y) {
 					None => return false,
 					Some(tile) => match tile.t {
@@ -621,11 +620,11 @@ impl Dungeon {
 
 }
 
-#[deriving(Clone)]
+#[derive(Clone,Copy)]
 struct Room {
-	x: int,
-	y: int,
-	w: int,
-	h: int,
+	x: isize,
+	y: isize,
+	w: isize,
+	h: isize,
 	hall: bool
 }
