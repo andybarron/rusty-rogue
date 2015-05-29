@@ -1,12 +1,13 @@
 extern crate sfml;
 extern crate rand;
 
-use std::env::{args, Args};
+use std::env::args;
 use engine::launch;
 use gameplay::GameplayScreen;
 use generator::generate_default;
 
 mod util;
+mod components;
 mod generator;
 mod graph;
 mod search;

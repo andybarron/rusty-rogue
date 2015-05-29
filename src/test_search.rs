@@ -5,9 +5,6 @@ use search::{SearchStrategy,AStarSearch};
 use std::collections::HashSet;
 use rand::{Rng,thread_rng};
 
-use graph;
-use search;
-
 fn print_graph(graph: &Graph, w: isize, h: isize, path: Option<Vec<(isize,isize)>>) {
 	for y in (0)..(h) {
 		for x in (0)..(w) {

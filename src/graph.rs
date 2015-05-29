@@ -100,7 +100,7 @@ impl Graph {
 	}
 }
 
-#[derive(Copy, Clone,Hash,PartialEq,Eq,Debug)]
+#[derive(Copy,Clone,Hash,PartialEq,Eq,Debug)]
 pub struct GraphNode {
 	x: isize,
 	y: isize,
@@ -126,9 +126,3 @@ impl GraphNode {
 		(dx_sq as f32 + dy_sq as f32).sqrt()
 	}
 }
-
-// impl PartialEq for GraphNode {
-// 	fn eq(&self, other: &GraphNode) -> bool {
-// 		self.x == other.x && self.y == other.y
-// 	}
-// }
