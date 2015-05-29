@@ -1,7 +1,12 @@
 extern crate sfml;
 extern crate rand;
+extern crate rustc_serialize;
 
 use std::env::args;
+use std::collections::{HashSet, HashMap};
+use std::iter::FromIterator;
+use std::convert::Into;
+use std::cell::Cell;
 use old_engine::launch;
 use gameplay::GameplayScreen;
 use generator::generate_default;
@@ -22,26 +27,31 @@ mod gameplay;
 
 mod test_gen;
 mod test_search;
+mod test_json;
 
 fn main() {
-    let mut done_gen = false;
-    let mut done_search = false;
-    let mut use_new = false;
-    for arg in args() {
-        if arg == "--test-gen" && !done_gen {
-            test_gen::main();
-            done_gen = true;
-        } else if arg == "--test-search" && !done_search {
-            test_search::main();
-            done_search = true;
-        } else if arg == "--new" && !use_new {
-            use_new = true;
-        }
+
+    let use_new = Cell::new(false);
+    let run_game = Cell::new(true);
+    let mut fn_map: HashMap<String, Box<Fn()>> = HashMap::new();
+    fn_map.insert("--test-gen".into(),
+            Box::new( || { test_gen::main(); run_game.set(false); } ));
+    fn_map.insert("--test-search".into(),
+            Box::new( || { test_search::main(); run_game.set(false); } ));
+    fn_map.insert("--test-json".into(),
+            Box::new( || { test_json::main(); run_game.set(false); } ));
+    fn_map.insert("--new".into(),
+            Box::new( || { use_new.set(true); } ));
+
+    let unique_args: HashSet<String> = HashSet::from_iter(args());
+
+    for arg in unique_args.iter() {
+        fn_map.remove(arg).map(|ref mut f| f());
     }
 
-    if done_gen || done_search { return; }
+    if !run_game.get() { return; }
 
-    if use_new {
+    if use_new.get() {
         engine::testing::launch_test();
     } else {
         launch(GameplayScreen::new( &generate_default( 123 ) ), "Rusty Rogue",

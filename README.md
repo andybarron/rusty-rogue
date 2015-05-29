@@ -29,6 +29,8 @@ To run the dungeon generation test: `cargo run -- --test-gen`
 
 To run the pathfinding test: `cargo run -- --test-search`
 
+To run the JSON seralization test: `cargo run -- --test-json`
+
 ### Controls
 * Move: arrow keys
 * Toggle line-of-sight debug view: `L`

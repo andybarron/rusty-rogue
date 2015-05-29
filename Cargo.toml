@@ -7,3 +7,4 @@ authors = ["Andy Barron <AndrewLBarron@gmail.com>"]
 sfml = "0.9.3"
 rand = "0.3.8"
 recs = "1.0.1"
+rustc-serialize = "0.3.14"
