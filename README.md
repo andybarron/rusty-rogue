@@ -23,6 +23,8 @@ To compile: `cargo build`
 
 To run the game: `cargo run`
 
+To test the new refactored version: `cargo run -- --new` (warning: super incomplete)
+
 To run the dungeon generation test: `cargo run -- --test-gen`
 
 To run the pathfinding test: `cargo run -- --test-search`

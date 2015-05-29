@@ -15,7 +15,7 @@ use sfml::window::keyboard;
 use sfml::window::keyboard::Key;
 use sfml::graphics::rc::CircleShape;
 
-use engine::{Game,Screen};
+use old_engine::{Game,Screen};
 use generator::{Tile,Dungeon,Floor,Corridor,Door,StairsUp,StairsDown,Monster,Wall};
 use util::get_gfx_path;
 use util::get_rc_resource;
