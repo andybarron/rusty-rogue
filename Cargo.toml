@@ -4,7 +4,17 @@ version = "0.1.0"
 authors = ["Andy Barron <AndrewLBarron@gmail.com>"]
 
 [dependencies]
-sfml = "0.9.3"
 rand = "0.3.8"
-recs = "1.0.1"
+num_cpus = "0.2.6"
 rustc-serialize = "0.3.14"
+
+piston = "*"
+piston2d-graphics = "*"
+pistoncore-glutin_window = "*"
+piston2d-opengl_graphics = "*"
+
+sfml = "0.9.3"
+
+# stuff i made! :D
+recs = "^1.0.1"
+poglgame = "^0.1.0"
