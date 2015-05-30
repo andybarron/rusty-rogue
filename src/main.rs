@@ -1,6 +1,9 @@
 extern crate sfml;
 extern crate rand;
 extern crate rustc_serialize;
+extern crate poglgame;
+
+use poglgame::piston;
 
 use std::env::args;
 use std::collections::{HashSet, HashMap};
@@ -10,8 +13,6 @@ use std::cell::Cell;
 use old_engine::launch;
 use gameplay::GameplayScreen;
 use generator::generate_default;
-
-mod engine;
 
 mod util;
 mod components;
@@ -28,6 +29,7 @@ mod gameplay;
 mod test_gen;
 mod test_search;
 mod test_json;
+mod test_new;
 
 fn main() {
 
@@ -52,7 +54,7 @@ fn main() {
     if !run_game.get() { return; }
 
     if use_new.get() {
-        engine::testing::launch_test();
+        test_new::launch_test_screen();
     } else {
         launch(GameplayScreen::new( &generate_default( 123 ) ), "Rusty Rogue",
                 800, 600);
