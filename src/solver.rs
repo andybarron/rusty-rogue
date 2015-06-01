@@ -22,21 +22,17 @@ pub struct Solution {
 pub struct Solver {
 	prob_send: Sender<Option<Problem>>,
 	soln_recv: Receiver<Solution>,
+	thread_handle: thread::JoinHandle<()>,
 	count: usize,
 }
 
 impl Solver {
 	pub fn new() -> Solver {
-		let (prob_send,prob_recv) = channel();
-		let (soln_send,soln_recv) = channel();
+		let (prob_send,prob_recv) = channel::<Option<Problem>>();
+		let (soln_send,soln_recv) = channel::<Solution>();
 
-		let this = Solver {
-			prob_send: prob_send,
-			soln_recv: soln_recv,
-			count: 0,
-		};
 
-		thread::spawn(move || {
+		let h = thread::spawn(move || {
 			let prob_recv = prob_recv;
 			let soln_send = soln_send;
 			let search = AStarSearch::new_diagonal();
@@ -58,7 +54,12 @@ impl Solver {
 			}
 		});
 
-		this
+		Solver {
+			prob_send: prob_send,
+			soln_recv: soln_recv,
+			thread_handle: h,
+			count: 0,
+		}
 	}
 	pub fn queue_solve(&mut self, id: usize, graph: Arc<RwLock<Graph>>, start: (isize,isize), end: (isize,isize)) {
 		let p = Problem{
@@ -90,5 +91,6 @@ impl Solver {
 impl Drop for Solver {
 	fn drop(&mut self) {
 		self.prob_send.send(None);
+		// self.thread_handle.join();
 	}
 }

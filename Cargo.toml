@@ -6,11 +6,12 @@ authors = ["Andy Barron <AndrewLBarron@gmail.com>"]
 [dependencies]
 rand = "0.3.8"
 num_cpus = "0.2.6"
+nalgebra = "0.2.15"
 rustc-serialize = "0.3.14"
 
 # stuff i made! :D
 recs = "^1.0.1"
-poglgame = "^0.2.1"
+poglgame = "^0.2.2"
 
 # to be removed
 sfml = "0.9.3"
