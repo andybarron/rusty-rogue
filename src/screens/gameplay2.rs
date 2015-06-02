@@ -47,13 +47,12 @@ impl Screen for GameplayScreen {
         if im.was_key_pressed(&Key::Escape) { 
             return UpdateResult::Quit;
         }
-        for id in self.ecs.collect_ids() {
-            let pos = self.ecs.get::<Position>(id).unwrap().0;
-            let vel = self.ecs.get::<Velocity>(id).unwrap().0;
-            let npos = pos + (vel * args.dt);
+        let colliders =
+            self.ecs.collect_with_3::<Position, Velocity, Collision>();
+        for &(id, pos, vel, col) in colliders.iter() {
+            let npos = pos.0 + (vel.0 * args.dt);
             self.ecs.set(id, &Position(npos));
-            let col: Collision = self.ecs.get(id).unwrap();
-            let hbox = Rect::new(pos.x, pos.y, col.w, col.h);
+            let hbox = Rect::new(npos.x, npos.y, col.w, col.h);
             if hbox.min().x < 0. {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.x = 0.);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.x *= -1.);
