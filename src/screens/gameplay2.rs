@@ -14,9 +14,11 @@ use na;
 use utils::*;
 use rect::*;
 use components::*;
+use physics::*;
 
 pub struct GameplayScreen {
     ecs: Ecs,
+    hits: Vec<Rect>,
 }
 
 impl GameplayScreen {
@@ -28,14 +30,16 @@ impl GameplayScreen {
             let pos = Vec2f::new(rng.gen::<float>() * w,
                     rng.gen::<float>() * h);
             let vel = Vec2f::rand(rng) * rng.gen_range(-100., 100.);
-            let rsize = &mut || 10. + rng.gen::<float>() * 10.;
+            let rsize = &mut || 50. + rng.gen::<float>() * 50.;
             let col = Collision{w: rsize(), h: rsize()};
             ecs.set(e, &Position(pos));
             ecs.set(e, &Velocity(vel));
             ecs.set(e, &col);
         }
+        let hits = Vec::with_capacity(ecs.iter_ids().count());
         GameplayScreen {
             ecs: ecs,
+            hits: hits,
         }
     }
 }
@@ -47,6 +51,7 @@ impl Screen for GameplayScreen {
         if im.was_key_pressed(&Key::Escape) { 
             return UpdateResult::Quit;
         }
+        self.hits.clear();
         let colliders =
             self.ecs.collect_with_3::<Position, Velocity, Collision>();
         for &(id, pos, vel, col) in colliders.iter() {
@@ -63,11 +68,34 @@ impl Screen for GameplayScreen {
             }
             if hbox.min().y < 0. {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.y = 0.);
-                self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.);
+                self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.0);
             }
             if hbox.min().y > 600. {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.y = 600.);
-                self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.);
+                self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.0);
+            }
+        }
+        let mut cols: Vec<_> = self.ecs
+                .collect_with_2::<Position, Collision>()
+                .iter()
+                .map(|&(id,_,col)| (id, col)).collect();
+        cols.sort_by(|&(id1, _), &(id2, _)| id1.cmp(&id2));
+        for &(id1, col1) in cols.iter() {
+            for &(id2, col2) in cols.iter() {
+                if (id1 == id2) { break; }
+                let a = Rect::from_components(&self.ecs.get(id1).unwrap(),
+                        &col1);
+                let b = Rect::from_components(&self.ecs.get(id2).unwrap(),
+                        &col2);
+                Rect::get_overlap(&a, &b).map(
+                        |r| self.hits.push(r));
+                // collide_rect_weighted(&a, &b, 0.5).map(|c| {
+                //     self.ecs.borrow_mut::<Position>(id1)
+                //         .map(|p| p.0 = p.0 + c.a);
+                //     self.ecs.borrow_mut::<Position>(id2)
+                //         .map(|p| p.0 = p.0 + c.b);
+                //     self.ecs.borrow_mut::<Velocity>(id1)
+                // });
             }
         }
         UpdateResult::Done
@@ -88,7 +116,11 @@ impl Screen for GameplayScreen {
                     // .rot_deg(45.0)
                     // .trans(-25.0, -25.0);
             // let square = rectangle::square(pos.x, pos.y, 50.0);
-            rectangle(color, Rect::from_components(pos, col).rounded(), tf, gl);
+            rectangle(color, Rect::from_components(&pos, &col).rounded(), tf, gl);
+        }
+        let highlight = [0.5, 0.0, 0.5, 1.0];
+        for r in self.hits.iter() {
+            rectangle(highlight, r.rounded(), c.transform, gl);
         }
     }
 }

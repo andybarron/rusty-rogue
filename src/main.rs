@@ -35,6 +35,7 @@ mod test_new;
 mod utils;
 mod components;
 mod rect;
+mod physics;
 mod screens;
 
 use utils::float;
