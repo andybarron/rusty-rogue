@@ -25,11 +25,11 @@ To run the game: `cargo run`
 
 To test the new Piston-powered version: `cargo run -- --new` (warning: super incomplete)
 
-To run the dungeon generation test: `cargo run -- --test-gen`
+To run the dungeon generation test: `cargo run -- --gen`
 
-To run the pathfinding test: `cargo run -- --test-search`
+To run the pathfinding test: `cargo run -- --search`
 
-To run the JSON seralization test: `cargo run -- --test-json`
+To run the JSON seralization test: `cargo run -- --json`
 
 ### Controls
 * Move: arrow keys

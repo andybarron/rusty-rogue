@@ -7,6 +7,7 @@ use poglgame::graphics::Context;
 use poglgame::launch;
 use poglgame::screen::*;
 use poglgame::game_input::*;
+
 use recs::{EntityId, Ecs};
 use rand::{Rand, Rng, thread_rng};
 use na;
@@ -19,6 +20,8 @@ use physics::*;
 pub struct GameplayScreen {
     ecs: Ecs,
     hits: Vec<Rect>,
+    w: float,
+    h: float,
 }
 
 impl GameplayScreen {
@@ -40,6 +43,8 @@ impl GameplayScreen {
         GameplayScreen {
             ecs: ecs,
             hits: hits,
+            w: 9999.0,
+            h: 9999.0,
         }
     }
 }
@@ -62,16 +67,18 @@ impl Screen for GameplayScreen {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.x = 0.);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.x *= -1.);
             }
-            if hbox.min().x > 800. {
-                self.ecs.borrow_mut::<Position>(id).map(|p| p.0.x = 800.);
+            let x_max = self.w - col.w;
+            if hbox.min().x > x_max {
+                self.ecs.borrow_mut::<Position>(id).map(|p| p.0.x = x_max);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.x *= -1.);
             }
             if hbox.min().y < 0. {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.y = 0.);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.0);
             }
-            if hbox.min().y > 600. {
-                self.ecs.borrow_mut::<Position>(id).map(|p| p.0.y = 600.);
+            let y_max = self.h - col.h;
+            if hbox.min().y > y_max {
+                self.ecs.borrow_mut::<Position>(id).map(|p| p.0.y = y_max);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.y *= -1.0);
             }
         }
@@ -82,7 +89,7 @@ impl Screen for GameplayScreen {
         cols.sort_by(|&(id1, _), &(id2, _)| id1.cmp(&id2));
         for &(id1, col1) in cols.iter() {
             for &(id2, col2) in cols.iter() {
-                if (id1 == id2) { break; }
+                if id1 == id2 { break; }
                 let a = Rect::from_components(&self.ecs.get(id1).unwrap(),
                         &col1);
                 let b = Rect::from_components(&self.ecs.get(id2).unwrap(),
@@ -100,8 +107,10 @@ impl Screen for GameplayScreen {
         }
         UpdateResult::Done
     }
-    fn draw(&self, args: &RenderArgs, c: Context, gl: &mut GlGraphics) {
+    fn draw(&mut self, args: &RenderArgs, c: Context, gl: &mut GlGraphics) {
         use poglgame::graphics::*;
+        self.w = args.draw_width as float;
+        self.h = args.draw_height as float;
         clear([0.0, 0.0, 0.25, 1.0], gl);
         let color = [0.0, 0.5, 0.5, 1.0];
         for id in self.ecs.iter_ids() {

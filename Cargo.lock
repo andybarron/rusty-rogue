@@ -4,7 +4,7 @@ version = "0.1.0"
 dependencies = [
  "nalgebra 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "poglgame 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "poglgame 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "recs 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -305,7 +305,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "poglgame"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "piston 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",

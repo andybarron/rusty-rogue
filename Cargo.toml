@@ -11,7 +11,7 @@ rustc-serialize = "0.3.14"
 
 # stuff i made! :D
 recs = "^1.1.0"
-poglgame = "^0.2.2"
+poglgame = "^0.3.0"
 
 # to be removed
 sfml = "0.9.3"

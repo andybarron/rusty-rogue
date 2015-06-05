@@ -1,5 +1,4 @@
 use na;
-use na::{Vec2};
 use utils::*;
 use components::*;
 

@@ -27,16 +27,17 @@ mod animation;
 mod entities;
 mod gameplay;
 
-mod test_gen;
-mod test_search;
-mod test_json;
-mod test_new;
-
 mod utils;
 mod components;
 mod rect;
 mod physics;
+mod gfx;
 mod screens;
+
+mod test_gen;
+mod test_search;
+mod test_json;
+mod test_new;
 
 use utils::float;
 use screens::GameplayScreen as NewGameplayScreen;
@@ -46,11 +47,11 @@ fn main() {
     let use_new = Cell::new(false);
     let run_game = Cell::new(true);
     let mut fn_map: HashMap<String, Box<Fn()>> = HashMap::new();
-    fn_map.insert("--test-gen".into(),
+    fn_map.insert("--gen".into(),
             Box::new( || { test_gen::main(); run_game.set(false); } ));
-    fn_map.insert("--test-search".into(),
+    fn_map.insert("--search".into(),
             Box::new( || { test_search::main(); run_game.set(false); } ));
-    fn_map.insert("--test-json".into(),
+    fn_map.insert("--json".into(),
             Box::new( || { test_json::main(); run_game.set(false); } ));
     fn_map.insert("--new".into(),
             Box::new( || { use_new.set(true); } ));
