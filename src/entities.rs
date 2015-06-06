@@ -38,6 +38,7 @@ pub struct Creature {
 	pub path_age: f32,
 	pub path_id: Option<usize>,
 	pub awake: bool,
+	pub path_target: Option<(isize,isize)>,
 	facing: Facing,
 }
 
@@ -56,6 +57,7 @@ impl Creature {
 			path_id: None,
 			awake: false,
 			facing: South,
+			path_target: None,
 		};
 
 		// TODO better sprite origin calculation?

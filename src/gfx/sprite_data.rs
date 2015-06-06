@@ -19,9 +19,8 @@ impl SpriteSetOptions {
     fn validate_internal(&self) -> Result<Self, &'static str> {
         let num_coords = self.position.len();
         if num_coords < 2 || num_coords % 2 != 0 {
-            Err("Sprite `position` should be one or more x/y pairs")
-        } else {
-            Ok(self.clone())
+            return Err("Sprite `position` should be one or more x/y pairs");
         }
+        Ok(self.clone())
     }
 }

@@ -510,11 +510,14 @@ impl GameplayScreen  {
 	}
 
 	fn request_path_update(&mut self, i: usize, hero: usize) {
+		let hero_coords = self.tile_coords_from_creature(&self.creatures[hero]);
+		let new_target = Some(hero_coords);
+		if self.creatures[i].path_target == new_target { return; }
 		let id = self.path_count;
 		self.path_count += 1;
 		self.creatures[i].path_id = Some(id);
+		self.creatures[i].path_target = new_target;
 		self.creatures[i].awake = true;
-		let hero_coords = self.tile_coords_from_creature(&self.creatures[hero]);
 		let rawr_coords = self.tile_coords_from_creature(&self.creatures[i]);
 		let solver_idx = i % self.solvers.len();
 		self.solvers[solver_idx].queue_solve(
