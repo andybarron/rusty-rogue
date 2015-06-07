@@ -1,0 +1,10 @@
+{
+  "floor": {
+    "wall": false,
+    "opaque": false,
+  },
+  "wall": {
+    "wall": true,
+    "opaque": true,
+  }
+}

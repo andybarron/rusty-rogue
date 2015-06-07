@@ -3,6 +3,7 @@ use rustc_serialize::json;
 use std::convert::Into;
 use gfx::*;
 use utils::*;
+use world::*;
 
 // #[derive(RustcDecodable, RustcEncodable, Debug)]
 // struct CharacterTemplate {
@@ -13,19 +14,26 @@ use utils::*;
 pub fn main() {
 
     let example =
+
+        TileInfo {
+            wall: true,
+            opaque: false,
+        };
+
         // SpriteInfo {
         //     texture: "gfx/all_tiles.json".into(),
         //     position: (0,0),
         //     size: (1,1),
         //     tile: None,
         // };
-        SpriteSetOptions {
-            texture: "gfx/all_tiles.png".into(),
-            size: (1, 1),
-            position: vec![0, 0],
-            tile: Some((64, 64)),
-            ..Default::default()
-        };
+
+        // SpriteSetOptions {
+        //     texture: "gfx/all_tiles.png".into(),
+        //     size: (1, 1),
+        //     position: vec![0, 0],
+        //     tile: Some((64, 64)),
+        //     ..Default::default()
+        // };
 
     println!("{:?}", Vec2::new(1,2) * Vec2::new(3,4));
 
@@ -42,10 +50,12 @@ pub fn main() {
         reader.read_line(&mut buf).ok().expect("Input error");
         buf = buf.trim().into();
         if buf == "exit" { break; }
-        let maybe_decoded: Option<SpriteSetOptions> =
+        let maybe_decoded: Option<TileInfo> =
                 json::decode(&buf).ok();
         match maybe_decoded {
-            Some(s) => println!("Successfully decoded JSON:\n{:?}", s.validate()),
+            Some(s) => println!("Successfully decoded JSON:\n{:?}", s
+                /* .validate() */
+            ),
             None => println!("Invalid JSON. Try again!"),
         }
     }

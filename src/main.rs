@@ -32,6 +32,7 @@ mod components;
 mod rect;
 mod physics;
 mod gfx;
+mod world;
 mod screens;
 
 mod test_gen;

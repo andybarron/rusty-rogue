@@ -1,5 +1,7 @@
 pub use na::{Vec2};
 
+// pub type int = isize;
+// pub type uint = usize;
 pub type float = f64;
 pub type Vec2f = Vec2<float>;
 

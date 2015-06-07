@@ -8,6 +8,7 @@ rand = "0.3.8"
 num_cpus = "0.2.6"
 nalgebra = "0.2.15"
 rustc-serialize = "0.3.14"
+petgraph = "0.1.6"
 
 # stuff i made! :D
 recs = "^1.1.0"
