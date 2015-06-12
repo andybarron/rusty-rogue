@@ -1,10 +1,12 @@
-{
-  "floor": {
+[
+  {
+    "name": "floor",
     "wall": false,
-    "opaque": false,
+    "opaque": false
   },
-  "wall": {
+  {
+    "name": "wall",
     "wall": true,
-    "opaque": true,
+    "opaque": true
   }
-}
+]

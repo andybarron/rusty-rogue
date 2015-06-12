@@ -16,6 +16,7 @@ pub fn main() {
     let example =
 
         TileInfo {
+            name: "window".into(),
             wall: true,
             opaque: false,
         };

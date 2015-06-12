@@ -1,8 +1,10 @@
-pub use na::{Vec2};
+use std::cmp::{PartialOrd, Ordering};
 
+pub use na::{Vec2};
 // pub type int = isize;
 // pub type uint = usize;
 pub type float = f64;
+pub type int = i64;
 pub type Vec2f = Vec2<float>;
 
 pub trait Vec2Ext<N> {
@@ -23,4 +25,12 @@ impl<N> Tuple2Ext<N> for (N, N) where N: Clone {
     fn vector(&self) -> Vec2<N> {
         Vec2::new(self.0.clone(), self.1.clone())
     }
+}
+
+pub fn min<T>(a: T, b: T) -> T where T: PartialOrd {
+    if b < a { b } else { a }
+}
+
+pub fn max<T>(a: T, b: T) -> T where T: PartialOrd {
+    if b > a { b } else { a }
 }

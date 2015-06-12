@@ -9,10 +9,10 @@ pub struct CollisionResult {
     pub vertical: bool,
 }
 
-pub fn collide_rect_weighted(a: &Rect, b: &Rect, w: float)
+pub fn collide_rect_weighted(a: &Rectf, b: &Rectf, w: float)
         -> Option<CollisionResult>
 {
-    Rect::get_overlap(a, b).map(|overlap| {
+    Rectf::get_overlap(a, b).map(|overlap| {
         assert!(0.0 <= w && w <= 1.0);
         let vertical = overlap.h() < overlap.w();
         let dist = if vertical { overlap.h() } else { overlap.w() } + EPSILON;

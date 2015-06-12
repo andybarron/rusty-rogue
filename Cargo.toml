@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Andy Barron <AndrewLBarron@gmail.com>"]
 
 [dependencies]
+num = "0.1"
 rand = "0.3.8"
 num_cpus = "0.2.6"
 nalgebra = "0.2.15"
@@ -12,7 +13,7 @@ petgraph = "0.1.6"
 
 # stuff i made! :D
 recs = "^1.1.0"
-poglgame = "^0.3.0"
+poglgame = "^0.4.0"
 
 # to be removed
 sfml = "0.9.3"

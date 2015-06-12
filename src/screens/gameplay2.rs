@@ -1,9 +1,9 @@
-use poglgame::piston::event::*;
-use poglgame::piston::window::WindowSettings;
-use poglgame::piston::input::{Key, MouseButton};
-use poglgame::opengl_graphics::GlGraphics;
-use poglgame::graphics::types::{Color, Vec2d};
-use poglgame::graphics::Context;
+use poglgame::event::*;
+use poglgame::window::WindowSettings;
+use poglgame::input::{Key, MouseButton};
+use poglgame::GlGraphics;
+use poglgame::types::{Color, Vec2d};
+use poglgame::Context;
 use poglgame::launch;
 use poglgame::screen::*;
 use poglgame::game_input::*;
@@ -19,7 +19,7 @@ use physics::*;
 
 pub struct GameplayScreen {
     ecs: Ecs,
-    hits: Vec<Rect>,
+    hits: Vec<Rectf>,
     w: float,
     h: float,
 }
@@ -62,7 +62,7 @@ impl Screen for GameplayScreen {
         for &(id, pos, vel, col) in colliders.iter() {
             let npos = pos.0 + (vel.0 * args.dt);
             self.ecs.set(id, &Position(npos));
-            let hbox = Rect::new(npos.x, npos.y, col.w, col.h);
+            let hbox = Rectf::new(npos.x, npos.y, col.w, col.h);
             if hbox.min().x < 0. {
                 self.ecs.borrow_mut::<Position>(id).map(|p| p.0.x = 0.);
                 self.ecs.borrow_mut::<Velocity>(id).map(|v| v.0.x *= -1.);
@@ -90,11 +90,11 @@ impl Screen for GameplayScreen {
         for &(id1, col1) in cols.iter() {
             for &(id2, col2) in cols.iter() {
                 if id1 == id2 { break; }
-                let a = Rect::from_components(&self.ecs.get(id1).unwrap(),
+                let a = Rectf::from_components(&self.ecs.get(id1).unwrap(),
                         &col1);
-                let b = Rect::from_components(&self.ecs.get(id2).unwrap(),
+                let b = Rectf::from_components(&self.ecs.get(id2).unwrap(),
                         &col2);
-                Rect::get_overlap(&a, &b).map(
+                Rectf::get_overlap(&a, &b).map(
                         |r| self.hits.push(r));
                 // collide_rect_weighted(&a, &b, 0.5).map(|c| {
                 //     self.ecs.borrow_mut::<Position>(id1)
@@ -108,7 +108,7 @@ impl Screen for GameplayScreen {
         UpdateResult::Done
     }
     fn draw(&mut self, args: &RenderArgs, c: Context, gl: &mut GlGraphics) {
-        use poglgame::graphics::*;
+        use poglgame::*;
         self.w = args.draw_width as float;
         self.h = args.draw_height as float;
         clear([0.0, 0.0, 0.25, 1.0], gl);
@@ -125,7 +125,7 @@ impl Screen for GameplayScreen {
                     // .rot_deg(45.0)
                     // .trans(-25.0, -25.0);
             // let square = rectangle::square(pos.x, pos.y, 50.0);
-            rectangle(color, Rect::from_components(&pos, &col).rounded(), tf, gl);
+            rectangle(color, Rectf::from_components(&pos, &col).rounded(), tf, gl);
         }
         let highlight = [0.5, 0.0, 0.5, 1.0];
         for r in self.hits.iter() {

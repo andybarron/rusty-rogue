@@ -1,5 +1,6 @@
 extern crate sfml;
 extern crate rand;
+extern crate num;
 extern crate nalgebra as na;
 extern crate rustc_serialize;
 extern crate poglgame;
@@ -9,8 +10,6 @@ use std::env::args;
 use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::cell::Cell;
-
-use poglgame::piston;
 
 use old_engine::launch;
 use gameplay::GameplayScreen;
@@ -39,6 +38,7 @@ mod test_gen;
 mod test_search;
 mod test_json;
 mod test_new;
+mod test_dungeon;
 
 use utils::float;
 use screens::GameplayScreen as NewGameplayScreen;
@@ -54,6 +54,8 @@ fn main() {
             Box::new( || { test_search::main(); run_game.set(false); } ));
     fn_map.insert("--json".into(),
             Box::new( || { test_json::main(); run_game.set(false); } ));
+    fn_map.insert("--dungeon".into(),
+            Box::new( || { test_dungeon::main(); run_game.set(false); } ));
     fn_map.insert("--new".into(),
             Box::new( || { use_new.set(true); } ));
 
@@ -70,7 +72,6 @@ fn main() {
         let h = 800;
         let scr = NewGameplayScreen::new(w as float, h as float);
         poglgame::launch(scr, "Rusty Rogue", w, h);
-
     } else {
         launch(GameplayScreen::new( &generate_default( 123 ) ), "Rusty Rogue",
                 800, 600);

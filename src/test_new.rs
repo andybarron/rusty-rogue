@@ -1,11 +1,11 @@
 extern crate poglgame;
 
-use poglgame::piston::event::*;
-use poglgame::piston::window::WindowSettings;
-use poglgame::piston::input::{Key, MouseButton};
-use poglgame::opengl_graphics::GlGraphics;
-use poglgame::graphics::types::{Color, Vec2d};
-use poglgame::graphics::Context;
+use poglgame::event::*;
+use poglgame::window::WindowSettings;
+use poglgame::input::{Key, MouseButton};
+use poglgame::GlGraphics;
+use poglgame::types::{Color, Vec2d};
+use poglgame::Context;
 
 use poglgame::launch;
 use poglgame::screen::*;
@@ -70,7 +70,7 @@ impl Screen for TestScreen {
         }
     }
     fn draw(&mut self, args: &RenderArgs, c: Context, gl: &mut GlGraphics) {
-        use poglgame::graphics::*;
+        use poglgame::*;
         clear(COLORS[self.color_idx], gl);
         let square = rectangle::square(0.0, 0.0, 50.0);
         let col = COLORS[(self.color_idx + 1) % COLORS.len()];

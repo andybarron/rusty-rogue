@@ -1,0 +1,8 @@
+{
+  "seed": 0,
+  "size": [100, 100],
+  "rooms": [15, 15],
+  "floor": "floor",
+  "wall": "wall",
+  "room_size": [6, 14]
+}

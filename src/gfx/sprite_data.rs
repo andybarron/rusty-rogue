@@ -5,7 +5,6 @@ use utils::*;
 
 #[derive(RustcDecodable, RustcEncodable, Debug, Clone, Default)]
 pub struct SpriteSetOptions {
-    pub texture: String,
     pub size: (u32, u32),
     pub position: Vec<u32>,
     pub tile: Option<(u32, u32)>,

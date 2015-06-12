@@ -25,7 +25,9 @@ To run the game: `cargo run`
 
 To test the new Piston-powered version: `cargo run -- --new` (warning: super incomplete)
 
-To run the dungeon generation test: `cargo run -- --gen`
+To test the new dungeon generation: `cargo run -- --dungeon` (also incomplete)
+
+To run the old dungeon generation test: `cargo run -- --gen`
 
 To run the pathfinding test: `cargo run -- --search`
 

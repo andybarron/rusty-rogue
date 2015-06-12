@@ -243,7 +243,7 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 
 			// pick cardinal direction to attch room
 			let direction = rng.gen_range(0,4);
-			// pick x poisize
+			// pick x point
 			let connect_x = match direction {
 				0|2 => rng.gen_range(existing.x,existing.x+existing.w),
 				1|3 => match rng.gen_range(0,2) {
@@ -253,7 +253,7 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 				},
 				_ => panic!("B")
 			};
-			// pick y poisize
+			// pick y point
 			let connect_y = match direction {
 				1|3 => rng.gen_range(existing.y,existing.y+existing.h),
 				0|2 => match rng.gen_range(0,2) {
@@ -263,7 +263,7 @@ pub fn generate(seed: u32, params: &DungeonParams) -> Dungeon {
 				},
 				_ => panic!("D")
 			};
-			// now that we have a connector poisize,
+			// now that we have a connector point,
 			// figure out where we want to put the new room
 			x = match direction {
 				// we must ADD ONE in this range because
