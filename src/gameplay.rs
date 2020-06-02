@@ -130,9 +130,9 @@ impl<'a> GameplayScreen<'a> {
 		let coords_dn = grab_tile_rect(10, 7);
 
 		// get sprite directly from coords
-		let get_spr = |x: usize, y: usize| -> Rc<Sprite<'a>> {
+		let get_spr = |x: usize, y: usize| -> Sprite<'a> {
 			let coords = grab_tile_rect(x, y);
-			let mut spr = Rc::new(Sprite::with_texture(texture));
+			let mut spr = (Sprite::with_texture(texture));
 			spr.set_texture_rect(&coords);
 			spr
 		};
@@ -167,7 +167,7 @@ impl<'a> GameplayScreen<'a> {
 				spr.set_texture_rect(coords);
 				spr.set_origin(Vector2f::new(t_sz as f32 / 2.0, t_sz as f32 / 2.0));
 				spr.set_position(Vector2f::new(x as f32, y as f32));
-				tile_data.sprites.push(Rc::new(spr));
+				tile_data.sprites.push(spr);
 			}
 
 			let wall_off = 1.0;
@@ -470,7 +470,8 @@ impl<'a> GameplayScreen<'a> {
 
 		// set up screen view
 		let ws = window.size();
-		self.view.set_size(Vector2f::new(ws.x as f32, ws.y as f32));
+		self.view
+			.set_size(Vector2f::new(ws.x as f32 / mag, ws.y as f32 / mag));
 
 		match player {
 			None => {}
@@ -948,7 +949,7 @@ impl<'a> Screen for GameplayScreen<'a> {
 /* Tile Sprite */
 
 struct TileData<'a> {
-	pub sprites: Vec<Rc<Sprite<'a>>>,
+	pub sprites: Vec<Sprite<'a>>,
 	pub bounds: FloatRect,
 	pub tile: Tile,
 	pub seen: bool,
@@ -1021,10 +1022,10 @@ impl<'a> GameplayScreen<'a> {
 	}
 
 	fn add_wall_check(
-		&'a mut self,
+		&mut self,
 		tile_data: &mut TileData<'a>,
 		offset: (isize, isize),
-		wall: &Rc<Sprite<'a>>,
+		wall: &Sprite<'a>,
 		wall_off: f32,
 	) -> bool {
 		if offset == (0, 0) || tile_data.tile.t == Wall {

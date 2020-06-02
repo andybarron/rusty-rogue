@@ -11,10 +11,10 @@ Rusty Rogue is a (prototype) procedurally generated, real-time action roguelike 
 
 ## Requirements
 
-* [Rust](http://www.rust-lang.org/), a new and totally awesome systems programming language. This project is currently using Rust 1.0 stable.
-* [Cargo](http://doc.crates.io/), Rust's wonderful package manager. May or may not be included with your Rust install.
-* [SFML](http://www.sfml-dev.org/) version 2.2, a cross-platform multimedia library. Make sure to install the right version!
-* [CSFML](http://www.sfml-dev.org/download/csfml/) version 2.2. C bindings for SFML.
+* [Rust](http://www.rust-lang.org/), a new and totally awesome systems programming language. This project is currently using Rust 1.43.1.
+* [Cargo](http://doc.crates.io/), Rust's wonderful package manager. Should be included with your Rust install.
+* [SFML](http://www.sfml-dev.org/) version 2.5, a cross-platform multimedia library. Make sure to install the right version!
+* [CSFML](http://www.sfml-dev.org/download/csfml/) version 2.5. C bindings for SFML.
 * All Rust libraries will be automatically downloaded and compiled by Cargo. (See `Cargo.toml` for the list.)
 
 ## Instructions
@@ -23,15 +23,9 @@ To compile: `cargo build`
 
 To run the game: `cargo run`
 
-To test the new Piston-powered version: `cargo run -- --new` (warning: super incomplete)
-
-To test the new dungeon generation: `cargo run -- --dungeon` (also incomplete)
-
-To run the old dungeon generation test: `cargo run -- --gen`
+To run the dungeon generation test: `cargo run -- --gen`
 
 To run the pathfinding test: `cargo run -- --search`
-
-To run the JSON seralization test: `cargo run -- --json`
 
 ### Controls
 * Move: arrow keys

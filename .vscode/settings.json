@@ -1,6 +1,7 @@
 {
   "editor.formatOnSave": true,
   "[rust]": {
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false
   }
 }

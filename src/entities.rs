@@ -44,7 +44,7 @@ pub struct Creature<'a> {
 }
 
 impl<'a> Creature<'a> {
-	pub fn new(anim: &'a Animation, max_health: isize) -> Creature<'a> {
+	pub fn new(anim: &Animation<'a>, max_health: isize) -> Creature<'a> {
 		// TODO position sprite differently
 		let mut c = Creature {
 			max_health: max_health,
