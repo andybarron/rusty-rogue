@@ -23,7 +23,7 @@ mod test_search;
 
 fn main() {
     let run_game = Cell::new(true);
-    let mut fn_map: HashMap<String, Box<Fn()>> = HashMap::new();
+    let mut fn_map: HashMap<String, Box<dyn Fn()>> = HashMap::new();
     fn_map.insert(
         "--gen".into(),
         Box::new(|| {
@@ -42,7 +42,7 @@ fn main() {
     let unique_args: HashSet<String> = HashSet::from_iter(args());
 
     for arg in unique_args.iter() {
-        fn_map.remove(arg).map(|ref mut f| f());
+        if let Some(ref mut f) = fn_map.remove(arg) { f() }
     }
 
     if !run_game.get() {

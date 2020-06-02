@@ -32,7 +32,7 @@ impl<'a> Animation<'a> {
 			frame_sets: vec![frames.clone()],
 			frame_set: 0,
 			timer: 0.0,
-			length: length,
+			length,
 			frame: 0,
 		}
 	}

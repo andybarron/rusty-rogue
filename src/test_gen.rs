@@ -56,9 +56,7 @@ pub fn main() {
 				if idx >= dungeons.len() {
 					println!("That's out of range!");
 					continue;
-				} else {
-					dungeons.get(idx).map(|d| d.print());
-				}
+				} else if let Some(d) = dungeons.get(idx) { d.print() }
 			}
 		}
 	}
