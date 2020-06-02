@@ -1,10 +1,9 @@
 use sfml::graphics::IntRect;
 use sfml::graphics::Sprite;
-use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Animation<'a> {
-	pub sprite: Rc<Sprite<'a>>,
+	pub sprite: Sprite<'a>,
 	frame_set: usize,
 	pub frame_sets: Vec<Vec<IntRect>>,
 	pub timer: f32,
@@ -27,7 +26,7 @@ pub struct Animation<'a> {
 
 impl<'a> Animation<'a> {
 	/* public */
-	pub fn new(sprite: &Rc<Sprite<'a>>, frames: &Vec<IntRect>, length: f32) -> Animation<'a> {
+	pub fn new(sprite: &Sprite<'a>, frames: &Vec<IntRect>, length: f32) -> Animation<'a> {
 		Animation {
 			sprite: sprite.clone(),
 			frame_sets: vec![frames.clone()],

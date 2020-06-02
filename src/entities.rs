@@ -4,7 +4,6 @@ use sfml::graphics::FloatRect;
 use sfml::graphics::Transformable;
 use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::system::Vector2f;
-use std::ops::Deref;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Facing {
@@ -132,7 +131,7 @@ impl<'a> Creature<'a> {
 	}
 
 	pub fn draw(&self, window: &mut RenderWindow) {
-		window.draw(self.anim.sprite.deref());
+		window.draw(&self.anim.sprite);
 	}
 
 	pub fn set_scale2f(&mut self, x: f32, y: f32) {

@@ -4,8 +4,6 @@ use sfml::window::{ContextSettings, Event, Key, VideoMode};
 
 use sfml::audio::{Music, Sound, SoundBuffer, SoundStatus};
 
-use crate::util::get_rc_resource;
-
 pub fn launch<T: Screen>(screen: T, title: &str, w: u32, h: u32) {
 	// init window
 	let setting: ContextSettings = ContextSettings::default();
@@ -134,12 +132,12 @@ impl<'a> Game<'a> {
 	) {
 		self.va.resize(2);
 		{
-			let a = self.va[0];
+			let a = &mut self.va[0];
 			a.position = *start;
 			a.color = *color;
 		}
 		{
-			let b = self.va[1];
+			let b = &mut self.va[1];
 			b.position = *end;
 			b.color = *color;
 		}
