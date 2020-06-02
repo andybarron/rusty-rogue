@@ -1,17 +1,15 @@
-use utils::*;
-use rect::*;
+use crate::rect::*;
+use crate::utils::*;
 
 const EPSILON: float = 0.1;
 
 pub struct CollisionResult {
-    pub a: Vec2f,
-    pub b: Vec2f,
+    pub a: Vector2f,
+    pub b: Vector2f,
     pub vertical: bool,
 }
 
-pub fn collide_rect_weighted(a: &Rectf, b: &Rectf, w: float)
-        -> Option<CollisionResult>
-{
+pub fn collide_rect_weighted(a: &Rectf, b: &Rectf, w: float) -> Option<CollisionResult> {
     Rectf::get_overlap(a, b).map(|overlap| {
         assert!(0.0 <= w && w <= 1.0);
         let vertical = overlap.h() < overlap.w();
@@ -22,9 +20,9 @@ pub fn collide_rect_weighted(a: &Rectf, b: &Rectf, w: float)
             b.center().x < a.center().x
         };
         let offset = if vertical {
-            Vec2f::new(0.0, dist)
+            Vector2f::new(0.0, dist)
         } else {
-            Vec2f::new(dist, 0.0)
+            Vector2f::new(dist, 0.0)
         } * if swap { -1.0 } else { 1.0 };
         CollisionResult {
             a: offset * (w - 1.0),

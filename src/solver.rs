@@ -1,22 +1,20 @@
-use std::sync::mpsc::{channel, Sender, Receiver};
-use std::sync::mpsc::RecvError;
-use std::sync::mpsc::TryRecvError;
+use crate::graph::Graph;
+use crate::search::{AStarSearch, SearchStrategy};
 use std::sync::mpsc::TryRecvError::*;
-use graph::Graph;
-use search::{SearchStrategy,AStarSearch};
-use std::sync::{Arc,RwLock};
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, RwLock};
 use std::thread;
 
 struct Problem {
 	id: usize,
 	graph: Arc<RwLock<Graph>>,
-	start: (isize,isize),
-	end: (isize,isize),
+	start: (isize, isize),
+	end: (isize, isize),
 }
 
 pub struct Solution {
 	pub id: usize,
-	pub path: Option<Vec<(isize,isize)>>,
+	pub path: Option<Vec<(isize, isize)>>,
 }
 
 pub struct Solver {
@@ -28,9 +26,8 @@ pub struct Solver {
 
 impl Solver {
 	pub fn new() -> Solver {
-		let (prob_send,prob_recv) = channel::<Option<Problem>>();
-		let (soln_send,soln_recv) = channel::<Solution>();
-
+		let (prob_send, prob_recv) = channel::<Option<Problem>>();
+		let (soln_send, soln_recv) = channel::<Solution>();
 
 		let h = thread::spawn(move || {
 			let prob_recv = prob_recv;
@@ -42,14 +39,15 @@ impl Solver {
 						Some(problem) => {
 							let id = problem.id;
 							let path = search.solve(
-								&*problem.graph.read().ok()
-								.expect("threading sucks"),problem.start,
-								problem.end);
-							soln_send.send( Solution { id: id, path: path } );
+								&*problem.graph.read().ok().expect("threading sucks"),
+								problem.start,
+								problem.end,
+							);
+							soln_send.send(Solution { id: id, path: path });
 						}
 						None => break,
 					},
-					Err(_) => panic!("ERROR: Solver receiver disconnected")
+					Err(_) => panic!("ERROR: Solver receiver disconnected"),
 				}
 			}
 		});
@@ -61,8 +59,14 @@ impl Solver {
 			count: 0,
 		}
 	}
-	pub fn queue_solve(&mut self, id: usize, graph: Arc<RwLock<Graph>>, start: (isize,isize), end: (isize,isize)) {
-		let p = Problem{
+	pub fn queue_solve(
+		&mut self,
+		id: usize,
+		graph: Arc<RwLock<Graph>>,
+		start: (isize, isize),
+		end: (isize, isize),
+	) {
+		let p = Problem {
 			id: id,
 			graph: graph,
 			start: start,
@@ -80,7 +84,7 @@ impl Solver {
 			Err(e) => match e {
 				Empty => None,
 				Disconnected => panic!("ERROR: Solver task killed prematurely"),
-			}
+			},
 		}
 	}
 	pub fn get_problem_count(&self) -> usize {

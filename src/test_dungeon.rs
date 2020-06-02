@@ -1,14 +1,13 @@
+use crate::world::*;
+use rustc_serialize::json;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Result as IoResult;
 use std::io::Read;
-use rustc_serialize::json;
-use world::*;
+use std::io::Result as IoResult;
 
 const NUM_TESTS: u32 = 1;
 
 pub fn test(offset: u32) -> IoResult<Dungeon> {
-
     let mut level_str = String::new();
     let mut tile_str = String::new();
     let mut level_json = File::open("./res/dat/level.json").unwrap();
@@ -18,8 +17,11 @@ pub fn test(offset: u32) -> IoResult<Dungeon> {
     let mut level_params: DungeonParams = json::decode(&level_str).unwrap();
     level_params.seed += offset;
     let tile_vec: Vec<TileInfo> = json::decode(&tile_str).unwrap();
-    let tile_map: HashMap<String, TileInfo> = tile_vec.iter().cloned()
-            .map(|t| (t.name.clone(), t)).collect();
+    let tile_map: HashMap<String, TileInfo> = tile_vec
+        .iter()
+        .cloned()
+        .map(|t| (t.name.clone(), t))
+        .collect();
     println!("Generating...");
     let mut d = generate(level_params, tile_map);
     println!("...Done.");
@@ -28,7 +30,7 @@ pub fn test(offset: u32) -> IoResult<Dungeon> {
 
 pub fn main() {
     for i in 0..NUM_TESTS {
-        println!("Running test {} of {}...", i+1, NUM_TESTS);
+        println!("Running test {} of {}...", i + 1, NUM_TESTS);
         test(i).unwrap().print();
     }
 }

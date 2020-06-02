@@ -1,10 +1,10 @@
-use sfml::graphics::rc::Sprite;
-use sfml::system::Vector2f;
 use sfml::graphics::IntRect;
+use sfml::graphics::Sprite;
+use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct Animation {
-	pub sprite: Sprite,
+pub struct Animation<'a> {
+	pub sprite: Rc<Sprite<'a>>,
 	frame_set: usize,
 	pub frame_sets: Vec<Vec<IntRect>>,
 	pub timer: f32,
@@ -25,12 +25,12 @@ pub struct Animation {
 // 	}
 // }
 
-impl Animation {
+impl<'a> Animation<'a> {
 	/* public */
-	pub fn new(sprite: &Sprite, frames: &Vec<IntRect>, length: f32) -> Animation {
+	pub fn new(sprite: &Rc<Sprite<'a>>, frames: &Vec<IntRect>, length: f32) -> Animation<'a> {
 		Animation {
 			sprite: sprite.clone(),
-			frame_sets: vec!(frames.clone()),
+			frame_sets: vec![frames.clone()],
 			frame_set: 0,
 			timer: 0.0,
 			length: length,
@@ -53,10 +53,7 @@ impl Animation {
 	}
 	/* private */
 	fn update_rect(&mut self) {
-		self.sprite.set_texture_rect(
-			&self.frame_sets[self.frame_set][
-				self.frame
-			]
-		);
+		self.sprite
+			.set_texture_rect(&self.frame_sets[self.frame_set][self.frame]);
 	}
 }

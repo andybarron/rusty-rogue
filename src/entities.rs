@@ -1,8 +1,10 @@
-use sfml::system::Vector2f;
+use crate::animation::Animation;
+use crate::util::{self, AngleHelper};
 use sfml::graphics::FloatRect;
+use sfml::graphics::Transformable;
 use sfml::graphics::{RenderTarget, RenderWindow};
-use animation::Animation;
-use util::{self, AngleHelper};
+use sfml::system::Vector2f;
+use std::ops::Deref;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Facing {
@@ -15,11 +17,11 @@ pub use self::Facing::*;
 
 impl Facing {
 	pub fn from_deg(degrees: f32) -> Facing {
-		match util::normalize_angle(degrees,false) {
-			45.0 ... 135.0 => South,
-			225.0 ... 315.0 => North,
-			135.0 ... 225.0 => West,
-			_ => East
+		match util::normalize_angle(degrees, false) {
+			45.0...135.0 => South,
+			225.0...315.0 => North,
+			135.0...225.0 => West,
+			_ => East,
 		}
 	}
 	pub fn from_rad(radians: f32) -> Facing {
@@ -28,28 +30,27 @@ impl Facing {
 }
 
 #[derive(Clone)]
-pub struct Creature {
+pub struct Creature<'a> {
 	max_health: isize,
 	health: isize,
 	pos: Vector2f,
-	pub anim: Animation,
+	pub anim: Animation<'a>,
 	pub player: bool,
-	path: Vec<(isize,isize)>,
+	path: Vec<(isize, isize)>,
 	pub path_age: f32,
 	pub path_id: Option<usize>,
 	pub awake: bool,
-	pub path_target: Option<(isize,isize)>,
+	pub path_target: Option<(isize, isize)>,
 	facing: Facing,
 }
 
-impl Creature {
-
-	pub fn new(anim: &Animation, max_health: isize) -> Creature {
+impl<'a> Creature<'a> {
+	pub fn new(anim: &'a Animation, max_health: isize) -> Creature<'a> {
 		// TODO position sprite differently
 		let mut c = Creature {
 			max_health: max_health,
 			health: max_health,
-			pos: Vector2f::new(0.0,0.0),
+			pos: Vector2f::new(0.0, 0.0),
 			anim: anim.clone(),
 			player: false,
 			path: Vec::new(),
@@ -61,8 +62,10 @@ impl Creature {
 		};
 
 		// TODO better sprite origin calculation?
-		let bounds = c.anim.sprite.get_local_bounds();
-		c.anim.sprite.set_origin2f(bounds.width/2.0,bounds.height/2.0);
+		let bounds = c.anim.sprite.local_bounds();
+		c.anim
+			.sprite
+			.set_origin(Vector2f::new(bounds.width / 2.0, bounds.height / 2.0));
 		c.update_anim_pos();
 
 		let f = c.facing;
@@ -73,7 +76,7 @@ impl Creature {
 
 	pub fn set_facing(&mut self, facing: Facing) {
 		self.facing = facing;
-		self.anim.set_frame_set( facing as usize );
+		self.anim.set_frame_set(facing as usize);
 	}
 
 	pub fn set_facing_deg(&mut self, degrees: f32) {
@@ -89,7 +92,7 @@ impl Creature {
 	}
 
 	fn update_anim_pos(&mut self) {
-		self.anim.sprite.set_position2f( self.pos.x, self.pos.y );
+		self.anim.sprite.set_position(self.pos);
 	}
 
 	#[inline]
@@ -99,14 +102,14 @@ impl Creature {
 
 	// TODO make better
 	pub fn get_bounds_trimmed(&self, trim: f32) -> FloatRect {
-		let mut bounds = self.anim.sprite.get_global_bounds();
+		let mut bounds = self.anim.sprite.global_bounds();
 		let reduce_h = bounds.height / 2.0;
 		let reduce_w = bounds.width / 4.0;
 
 		bounds.height -= reduce_h;
 		bounds.top += reduce_h;
 		bounds.width -= reduce_w;
-		bounds.left += reduce_w/2.0;
+		bounds.left += reduce_w / 2.0;
 
 		if trim != 0.0 {
 			bounds.left += trim;
@@ -123,17 +126,17 @@ impl Creature {
 	}
 
 	pub fn move_polar_rad(&mut self, distance: f32, radians: f32) {
-		self.pos.x += distance*radians.cos();
-		self.pos.y += distance*radians.sin();
+		self.pos.x += distance * radians.cos();
+		self.pos.y += distance * radians.sin();
 		self.update_anim_pos();
 	}
 
 	pub fn draw(&self, window: &mut RenderWindow) {
-		window.draw(&self.anim.sprite);
+		window.draw(self.anim.sprite.deref());
 	}
 
 	pub fn set_scale2f(&mut self, x: f32, y: f32) {
-		self.anim.sprite.set_scale2f(x,y);
+		self.anim.sprite.set_scale(Vector2f::new(x, y));
 	}
 
 	pub fn set_position2f(&mut self, x: f32, y: f32) {
@@ -169,26 +172,25 @@ impl Creature {
 		ret
 	}
 
-	pub fn set_path(&mut self, path: &Vec<(isize,isize)>) {
+	pub fn set_path(&mut self, path: &Vec<(isize, isize)>) {
 		self.path.clear();
 		self.path = path.clone();
 		self.path_age = 0.0;
 	}
 
-	pub fn get_target_node(&self) -> Option<(isize,isize)> {
+	pub fn get_target_node(&self) -> Option<(isize, isize)> {
 		match self.has_path() {
 			false => None,
-			true => Some(self.path[0].clone())
+			true => Some(self.path[0].clone()),
 		}
 	}
 
-	pub fn get_path(&self) -> Option<Vec<(isize,isize)>> {
+	pub fn get_path(&self) -> Option<Vec<(isize, isize)>> {
 		match self.path.len() {
 			0 => None,
-			_ => Some(self.path.clone())
+			_ => Some(self.path.clone()),
 		}
 	}
-	
 }
 
 // impl Clone for Creature {
